@@ -1,0 +1,6 @@
+,Recompensa clínica media,Falsos negativos (infarto en Verde),Falsas alarmas (sano en Rojo),Infartos escalados a Rojo,Sanos en Verde,% Rojo,% Amarillo,% Verde
+Siempre Rojo,5.007604562737643,0,101,100%,0%,100%,0%,0%
+Q-Table cuantiles (Taller 2),5.328897338403042,0,38,90%,0%,70%,30%,0%
+Q-Table K-Means (Taller 2),5.007604562737643,0,101,100%,0%,100%,0%,0%
+DQN · 8 variables,6.730038022813688,1,27,98%,59%,71%,6%,23%
+DQN final · troponina + CK-MB,7.876425855513308,0,5,100%,92%,63%,1%,35%
