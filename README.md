@@ -1,96 +1,166 @@
-# MDP — Detección temprana de pacientes con posible infarto
+# Análisis cardiovascular: MDP y CardioLab
 
-Taller 1, Corte 3 (Aprendizaje por Refuerzo). Proyecto que modela un **Proceso de
-Decisión de Markov (MDP)** sobre un conjunto de datos médicos para decidir el nivel
-de atención (triaje) de cada paciente según sus marcadores cardíacos, minimizando el
-error más costoso: no detectar un infarto.
+Este repositorio reúne dos desarrollos académicos basados en el conjunto
+`Medicaldataset.csv`: un modelo de decisión de Markov para estudiar estrategias
+de triaje y una aplicación de análisis que combina métodos de aprendizaje
+automático con una interfaz web.
 
-> Los grupos y supuestos son descriptivos, no diagnósticos, y no sustituyen la
-> evaluación de un profesional de la salud.
+El trabajo tiene fines educativos y de exploración metodológica. Sus salidas no
+constituyen diagnósticos ni recomendaciones clínicas.
 
-## El MDP en una línea
+## Componentes
 
-- **Estados** `S = {Bajo, Dudoso, Alto-T, Alto-CK}` — perfiles de riesgo (K-Means sobre troponina y CK-MB).
-- **Acciones** `A = {ESCALAR, REPETIR, SEGUIMIENTO}` — semáforo rojo / amarillo / verde.
-- **Recompensa** `R(s,a)` — basada en el costo de cada error (el falso negativo cuesta −1000).
-- **Transición** `P(s'|s,a)` — construida consultando los modelos (AdaBoost + K-Means).
-- **Solución** — Iteración de Valor (γ = 0.9) → la política óptima es **ESCALAR en los 4 estados**.
+### Modelo de decisión de Markov
+
+Los scripts de la raíz construyen estados a partir de marcadores cardíacos,
+estiman recompensas y transiciones, y calculan una política mediante iteración de
+valor. El modelo representa cuatro estados de riesgo y tres acciones:
+`ESCALAR`, `REPETIR` y `SEGUIMIENTO`. Las transiciones se estiman mediante una
+simulación descrita en `transiciones.py`; no representan observaciones
+longitudinales de pacientes.
+
+### CardioLab
+
+La carpeta `backend/` contiene una API en FastAPI y módulos para:
+
+- revisar la estructura, calidad y estadísticas descriptivas del conjunto;
+- preparar variables clínicas con transformaciones logarítmicas y
+  estandarización;
+- explorar agrupamientos K-Means y jerárquicos mediante perfiles clínicos,
+  silhouette, índice de Dunn y correlación cofenética;
+- entrenar un clasificador Random Forest y obtener predicciones experimentales.
+
+La carpeta `frontend/` contiene una interfaz estática en HTML, CSS y JavaScript.
+Consulta los endpoints disponibles para mostrar el resumen y las estadísticas,
+y permite enviar datos a la ruta de predicción.
+
+En esta versión, las vistas de clustering y del resumen del clasificador también
+solicitan rutas que aún no están implementadas en la API
+(`/api/b1/clustering/jerarquico`, `/api/b1/clustering/perfiles` y
+`/api/b1/clasificacion/resumen`). Esos paneles pueden permanecer pendientes.
+
+## Datos
+
+El archivo de entrada contiene variables demográficas y clínicas —edad, género,
+frecuencia cardíaca, presión arterial, glucosa, CK-MB y troponina— junto con la
+etiqueta `Result`. CardioLab carga la copia ubicada en
+`backend/data/Medicaldataset.csv`; los scripts de MDP usan `Medicaldataset.csv`
+en la raíz.
+
+Antes de redistribuir el conjunto fuera de este repositorio, verifique las
+condiciones de uso y citación establecidas por su fuente original.
 
 ## Requisitos
 
-- Python 3
-- `numpy`, `pandas`, `scikit-learn`, `joblib` y `matplotlib`
+Se requiere Python 3.9 o posterior. Las dependencias de Python están declaradas
+en [`requirements.txt`](requirements.txt):
+
+- FastAPI y Uvicorn para la API;
+- Pydantic para validar las entradas;
+- NumPy, pandas y SciPy para manipulación de datos y cálculos numéricos;
+- scikit-learn para clasificación, agrupamiento y métricas;
+- Matplotlib para generar figuras;
+- Joblib para los scripts de modelado existentes en la raíz.
+
+El frontend no requiere paquetes de Node.js ni un proceso de compilación; utiliza
+HTML, CSS y JavaScript nativos.
+
+### Instalación
+
+Desde la raíz del repositorio:
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-python -m pip install numpy pandas scikit-learn joblib matplotlib
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-## Cómo ejecutar (en orden)
+En Windows PowerShell, active el entorno con:
 
-Cada script usa las salidas del anterior. Con `Medicaldataset.csv` en la carpeta:
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## Ejecución de CardioLab
+
+Desde la raíz, inicie la API:
 
 ```bash
-python estados.py          # Parte 2, Pasos 1-2: limpieza + estados (K-Means)
-python recompensa.py       # Parte 2, Paso 3a: R(s,a)
-python transiciones.py     # Parte 2, Paso 3b: P(s'|s,a)
-python politica_mdp.py     # Parte 2, Pasos 4-5: Iteración de Valor + política
-python grafica_politica.py # Parte 3: distribución de la política + "batalla"
-python grafica.py          # (opcional) gráficas de los estados (Parte 2)
+uvicorn main:app --app-dir backend --reload
 ```
 
-## Qué hace cada paso
+La documentación interactiva de FastAPI queda disponible en
+`http://127.0.0.1:8000/docs`. Rutas implementadas:
 
-### Pasos 1-2 — Estados (`estados.py`)
-Limpia el dataset (elimina 5 filas con frecuencia cardíaca imposible → 1314 filas),
-transforma troponina y CK-MB con `log10`, los estandariza y agrupa con **K-Means (K=4)**.
-Reordena los grupos por proporción de positivos y los nombra Bajo, Dudoso, Alto-Troponina
-y Alto-CKMB. Guarda `dataset_con_estados.csv`, `perfil_estados.csv` y `modelo_estados.joblib`.
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/api/salud` | Comprobación del servicio |
+| `GET` | `/api/b1/datos/resumen` | Dimensiones, nulos, duplicados y distribución de la etiqueta |
+| `GET` | `/api/b1/datos/estadisticas` | Estadísticos descriptivos de las variables |
+| `POST` | `/api/b1/clasificacion/predecir` | Predicción experimental para un registro |
 
-### Paso 3a — Recompensa (`recompensa.py`)
-Define la recompensa base por decisión según el resultado real del paciente
-(ESCALAR +100/−10, REPETIR −40/−3, SEGUIMIENTO **−1000**/+5) y promedia por estado para
-obtener `R(s,a)`. El falso negativo (dejar en SEGUIMIENTO a quien sí tiene infarto) se
-penaliza ~100× una falsa alarma. Salida: `recompensa.csv`.
+En otra terminal, sirva la carpeta del proyecto para abrir la interfaz:
 
-### Paso 3b — Transiciones (`transiciones.py`)
-**Opción B** (se descartó `shift(-1)` porque cada fila es un paciente, no una serie de
-tiempo). Entrena **AdaBoost** para estimar `p = P(infarto | paciente)`, simula cómo
-cambian troponina y CK-MB en el siguiente control según la acción (multiplicadores
-×0.40 ESCALAR, ×1.15 REPETIR, ×1.60 SEGUIMIENTO sobre pacientes con infarto; sanos ×1.00
-con 10 % de ruido), reasigna el estado con `K-Means.predict()` y normaliza cada fila a 1.
-Salidas: `transiciones.npz` y `P_ESCALAR.csv`, `P_REPETIR.csv`, `P_SEGUIMIENTO.csv`.
+```bash
+python3 -m http.server 5500
+```
 
-### Pasos 4-5 — Política (`politica_mdp.py`)
-Resuelve el MDP con **Iteración de Valor** (`V(s) ← maxₐ[R(s,a) + γ·Σ P(s'|s,a)·V(s')]`,
-γ = 0.9) hasta converger, y extrae la política óptima `π*(s) = argmaxₐ Q(s,a)`.
-Resultado: **ESCALAR en los 4 estados**. Salidas: `politica_optima.csv`, `valores_estado.csv`.
+Visite `http://localhost:5500/frontend/`. La interfaz utiliza por defecto la API
+en `http://127.0.0.1:8000`; ambos servicios deben permanecer activos.
 
-### Parte 3 — Batalla de políticas (`grafica_politica.py`)
-Grafica la distribución de la política óptima y la compara contra estrategias simples
-evaluando `V^π = (I − γP_π)⁻¹ R_π`. La política del agente (**+428** aprox.) es la única
-con valor positivo y supera a "nunca actuar" (SEGUIMIENTO, ≈ −8 400) por casi 9 000 puntos.
-Salidas: `grafica_distribucion_politica.png`, `grafica_batalla_politicas.png`, `batalla_politicas.csv`.
+## Reproducción de los análisis
 
-> **Nota de reproducibilidad.** `transiciones.py` genera `P` por simulación (semilla fija),
-> por lo que sus valores pueden variar ±0.01 y los `V*` en unos pocos puntos frente a los de
-> la presentación. La **política óptima y las conclusiones son idénticas**.
+Para ejecutar el pipeline de CardioLab desde la raíz:
 
-## Archivos principales
+```bash
+PYTHONPATH=backend python -m bloque01.ejecutar
+```
 
-| Archivo | Rol |
-|---|---|
-| `estados.py` | Pasos 1-2: limpieza, estados (K-Means) |
-| `recompensa.py` | Paso 3a: `R(s,a)` |
-| `transiciones.py` | Paso 3b: `P(s'|s,a)` (AdaBoost + K-Means) |
-| `politica_mdp.py` | Pasos 4-5: Iteración de Valor + política |
-| `grafica_politica.py` | Parte 3: distribución + batalla de políticas |
-| `grafica.py` | Gráficas de los estados |
-| `Medicaldataset.csv` | Dataset de entrada |
+En Windows PowerShell:
 
-## Gráficas de los estados
+```powershell
+$env:PYTHONPATH = "backend"
+python -m bloque01.ejecutar
+```
 
-![Dispersión de troponina y CK-MB por estado](grafica_estados_dispersion.png)
+Los scripts del modelo MDP también pueden ejecutarse desde la raíz, siguiendo
+este orden:
 
-![Proporción de resultados positivos por estado](grafica_estados_positivos.png)
+```bash
+python estados.py
+python recompensa.py
+python transiciones.py
+python politica_mdp.py
+python grafica_politica.py
+```
+
+El subproyecto `taller3_dqn/` conserva su propio archivo de dependencias y sus
+instrucciones de ejecución en su README.
+
+## Estructura principal
+
+```text
+.
+├── backend/
+│   ├── bloque01/       # Datos, clustering, clasificación y rutas de la API
+│   ├── data/           # Conjunto de datos utilizado por CardioLab
+│   ├── figuras/        # Dendrograma de referencia
+│   └── main.py         # Aplicación FastAPI
+├── frontend/           # Interfaz web estática
+├── taller3_dqn/        # Extensión de aprendizaje por refuerzo profundo
+├── estados.py          # Preparación de estados para el MDP
+├── recompensa.py       # Matriz de recompensa
+├── transiciones.py     # Estimación de transiciones
+└── politica_mdp.py     # Iteración de valor y política
+```
+
+## Alcance
+
+Los modelos se entrenan con el conjunto disponible y tienen propósito
+demostrativo. La calidad de sus predicciones depende de la representatividad,
+procedencia y limitaciones de esos datos. No deben utilizarse para decidir la
+atención de pacientes ni sustituir la evaluación de profesionales de la salud.
