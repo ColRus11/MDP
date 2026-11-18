@@ -157,27 +157,6 @@ def evaluar_jerarquico(X, k_min=2, k_max=10) -> list[dict]:
     return resultados
 
 
-METODOS_ENLACE = ["ward", "complete", "average"]
-
-
-def evaluar_jerarquico(X, k_min=2, k_max=10) -> list[dict]:
-    distancias = pdist(X)
-    resultados = []
-    for metodo in METODOS_ENLACE:
-        Z = linkage(X, method=metodo)
-        corr_cofenetica, _ = cophenet(Z, distancias)
-        for k in range(k_min, k_max + 1):
-            etiquetas = fcluster(Z, k, criterion="maxclust")
-            resultados.append({
-                "metodo": metodo,
-                "k": k,
-                "cofenetica": float(corr_cofenetica),
-                "silhouette": float(silhouette_score(X, etiquetas)),
-                "tamano_min": int(np.bincount(etiquetas)[1:].min()),
-            })
-    return resultados
-
-
 def guardar_dendrograma(X, metodo="ward", ruta="figuras/dendrograma_ward.png"):
     Z = linkage(X, method=metodo)
     plt.figure(figsize=(10, 5))
