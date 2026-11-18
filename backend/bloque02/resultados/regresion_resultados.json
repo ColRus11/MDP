@@ -1,0 +1,65 @@
+{
+  "resultados": [
+    {
+      "modelo": "Random Forest",
+      "r2": 0.954173511795624,
+      "mae": 0.013181242078580482,
+      "rmse": 0.10411678146441862
+    },
+    {
+      "modelo": "Gradient Boosting",
+      "r2": 0.9427519482384565,
+      "mae": 0.025856410960117295,
+      "rmse": 0.11637047350755682
+    },
+    {
+      "modelo": "Lineal",
+      "r2": 0.21074908105979162,
+      "mae": 0.39583403844203996,
+      "rmse": 0.4320857998248334
+    },
+    {
+      "modelo": "Ridge",
+      "r2": 0.2106614478398815,
+      "mae": 0.3958828007518157,
+      "rmse": 0.4321097871386229
+    }
+  ],
+  "mejor_modelo": "Random Forest",
+  "importancias": [
+    {
+      "variable": "Troponin",
+      "importancia": 0.5901691127763974
+    },
+    {
+      "variable": "CK-MB",
+      "importancia": 0.37693340531130587
+    },
+    {
+      "variable": "Gender",
+      "importancia": 0.01931025613636975
+    },
+    {
+      "variable": "Blood sugar",
+      "importancia": 0.005534212590153073
+    },
+    {
+      "variable": "Diastolic blood pressure",
+      "importancia": 0.003539527112844319
+    },
+    {
+      "variable": "Age",
+      "importancia": 0.0018023223639462593
+    },
+    {
+      "variable": "Systolic blood pressure",
+      "importancia": 0.001690557372950775
+    },
+    {
+      "variable": "Heart rate",
+      "importancia": 0.0010206063360326612
+    }
+  ],
+  "n_test": 263,
+  "objetivo": "riesgo_infarto_continuo_0_1"
+}
