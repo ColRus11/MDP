@@ -9,13 +9,17 @@
     clusteringProfiles: "/api/b1/clustering/perfiles",
     classification: "/api/b1/clasificacion/resumen",
     prediction: "/api/b1/clasificacion/predecir",
+    clusterAssignment: "/api/b1/clustering/asignar",
+    dbscan: "/api/b1/dbscan/analisis",
   };
+  const CLUSTER_DISCLAIMER = "Agrupación no supervisada con fines exploratorios. El porcentaje corresponde a los pacientes del dataset de entrenamiento en ese grupo, no a la probabilidad de este paciente. No es un diagnóstico.";
   const numberFormat = new Intl.NumberFormat("es-CO");
+  let activeTreeView = null;
   const tabTitles = {
     overview: "Resumen",
     clustering: "Clustering",
     classification: "Clasificación",
-    prediction: "Demo predictiva",
+    prediction: "Consulta de clasificación",
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -40,7 +44,15 @@
       let detail = "";
       try {
         const body = await response.json();
-        detail = body.detail || body.message || "";
+        const responseDetail = body.detail ?? body.message;
+        if (Array.isArray(responseDetail)) {
+          detail = responseDetail
+            .map((item) => typeof item === "string" ? item : item?.msg)
+            .filter(Boolean)
+            .join(" ");
+        } else if (typeof responseDetail === "string") {
+          detail = responseDetail;
+        }
       } catch {
         detail = "";
       }
@@ -169,6 +181,118 @@
     }
   }
 
+  async function loadDbscanAnalysis() {
+    const form = $("#dbscanForm");
+    const button = $("#dbscanSubmit");
+    const status = $("#dbscanStatus");
+    const parameters = new FormData(form);
+    const query = new URLSearchParams({
+      eps: parameters.get("eps"),
+      min_samples: parameters.get("min_samples"),
+    });
+
+    button.disabled = true;
+    status.hidden = false;
+    status.textContent = "Calculando el perfil DBSCAN en el backend…";
+    try {
+      const data = await request(`${API.dbscan}?${query}`);
+      renderDbscanAnalysis(data);
+      status.textContent = "Análisis actualizado con datos del backend.";
+    } catch (error) {
+      status.textContent = `No fue posible cargar el análisis DBSCAN: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function renderDbscanAnalysis(data) {
+    $("#dbscanTotal").textContent = numberFormat.format(data.total_pacientes);
+    $("#dbscanNoise").textContent = numberFormat.format(data.pacientes_ruido);
+    $("#dbscanOutlierPct").textContent = `${formatNumber(data.porcentaje_atipicos)}%`;
+    $("#dbscanDense").textContent = numberFormat.format(data.pacientes_densos);
+    $("#dbscanParameters").textContent =
+      `eps = ${formatNumber(data.parametros.eps)} · min_samples = ${numberFormat.format(data.parametros.min_samples)}`;
+    $("#dbscanExplanation").textContent = data.explicacion;
+
+    const comparison = $("#dbscanComparison");
+    const rows = Array.isArray(data.comparacion) ? data.comparacion : [];
+    comparison.replaceChildren();
+    if (!rows.length) {
+      const row = document.createElement("tr");
+      const cell = createTextElement("td", "", "El backend no devolvió grupos para estos parámetros.");
+      cell.colSpan = 10;
+      row.append(cell);
+      comparison.append(row);
+    } else {
+      rows.forEach((group) => {
+        const row = document.createElement("tr");
+        [
+          group.etiqueta,
+          formatNumber(group.pacientes, 0),
+          formatNumber(group.edad_promedio),
+          formatNumber(group.pulso_promedio),
+          formatNumber(group.sistolica_promedio),
+          formatNumber(group.diastolica_promedio),
+          formatNumber(group.glucosa_promedio),
+          formatNumber(group.ckmb_mediana),
+          formatNumber(group.troponina_mediana),
+          `${formatNumber(group.porcentaje_positivos)}%`,
+        ].forEach((value) => row.append(createTextElement("td", "", value)));
+        comparison.append(row);
+      });
+    }
+
+    renderDbscanCharts(Array.isArray(data.graficos) ? data.graficos : []);
+  }
+
+  function renderDbscanCharts(charts) {
+    const container = $("#dbscanCharts");
+    container.replaceChildren();
+    charts.forEach((chart) => {
+      const card = createTextElement("article", "surface-card dbscan-chart-card");
+      const heading = createTextElement("div", "card-heading");
+      heading.append(
+        createTextElement("div", "", ""),
+        createTextElement("span", "chart-badge", "COMPARACIÓN"),
+      );
+      const headingText = createTextElement("div", "");
+      headingText.append(
+        createTextElement("h3", "", chart.titulo),
+        createTextElement("p", "", chart.unidad),
+      );
+      heading.firstElementChild.replaceWith(headingText);
+      card.append(heading);
+
+      const values = Array.isArray(chart.valores) ? chart.valores : [];
+      const max = Math.max(...values.map((entry) => Math.abs(Number(entry.valor) || 0)), 1);
+      values.forEach((entry) => {
+        const row = createTextElement("div", "dbscan-bar-row");
+        const value = Number(entry.valor);
+        const track = createTextElement("span", "importance-track");
+        const fill = createTextElement("span", "dbscan-bar-fill");
+        fill.style.width = `${Math.max(0, Math.min(100, Math.abs(value) / max * 100))}%`;
+        track.append(fill);
+        row.append(
+          createTextElement("span", "importance-label", entry.etiqueta),
+          track,
+          createTextElement("strong", "importance-value", formatNumber(value)),
+        );
+        card.append(row);
+      });
+      container.append(card);
+    });
+
+    if (!charts.length) {
+      const empty = createTextElement("div", "empty-state");
+      empty.append(
+        createTextElement("span", "", "◷"),
+        createTextElement("b", "", "No hay comparaciones disponibles"),
+        createTextElement("small", "", "El backend no devolvió estadísticas para estos parámetros."),
+      );
+      container.append(empty);
+    }
+  }
+
   function renderClusteringMetrics(data) {
     const rows = Array.isArray(data) ? data : data.resultados;
     if (!Array.isArray(rows) || rows.length === 0) return;
@@ -202,13 +326,28 @@
       const data = await request(API.classification);
       renderClassification(data);
       $("#classificationNotice").hidden = true;
-    } catch {
-      // The endpoint is not part of the current backend; the notice explains this state.
+    } catch (error) {
+      $("#classificationNotice").hidden = false;
+      $("#classificationNotice").textContent =
+        `No fue posible cargar las métricas del clasificador: ${error.message}`;
     }
   }
 
   function renderClassification(data) {
     if (data.accuracy !== undefined) $("#modelAccuracy").textContent = `${formatNumber(Number(data.accuracy) * 100, 2)}%`;
+    if (data.precision !== undefined) $("#modelPrecision").textContent = `${formatNumber(Number(data.precision) * 100, 2)}%`;
+    if (data.recall !== undefined) $("#modelRecall").textContent = `${formatNumber(Number(data.recall) * 100, 2)}%`;
+    if (data.f1_score !== undefined) $("#modelF1").textContent = `${formatNumber(Number(data.f1_score) * 100, 2)}%`;
+    if (data.test_samples !== undefined) $("#testSamples").textContent = numberFormat.format(data.test_samples);
+    if (data.configuracion) {
+      const config = data.configuracion;
+      const fingerprint = String(config.dataset_sha256 || "").slice(0, 12);
+      $("#modelConfiguration").textContent =
+        `${config.algoritmo} v${config.version} · ${config.n_estimators} árboles · ` +
+        `test_size ${config.test_size} · random_state ${config.random_state} · ` +
+        `scikit-learn ${config.sklearn_version} · ` +
+        `datos SHA-256 ${fingerprint}`;
+    }
     const matrix = data.confusion_matrix;
     if (Array.isArray(matrix)) renderConfusionMatrix(matrix, data.clases || ["Negativo", "Positivo"]);
     const importances = data.feature_importances;
@@ -230,7 +369,8 @@
     const usable = entries.filter(([name, value]) => name !== undefined && Number.isFinite(Number(value)));
     if (!usable.length) return;
     const max = Math.max(...usable.map(([, value]) => Number(value)), 1e-12);
-    $("#predictorCount").textContent = numberFormat.format(usable.length);
+    const predictorCount = $("#predictorCount");
+    if (predictorCount) predictorCount.textContent = numberFormat.format(usable.length);
     $("#importanceChart").innerHTML = usable.map(([name, value]) => {
       const importance = Number(value);
       return `<div class="importance-row"><span class="importance-label">${escapeHtml(name)}</span><span class="importance-track"><span class="importance-fill" style="width:${Math.max(0, Math.min(100, importance / max * 100))}%"></span></span><span class="importance-value">${formatNumber(importance, 3)}</span></div>`;
@@ -253,35 +393,92 @@
     </tr>`).join("");
   }
 
-  async function submitPrediction(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    if (!form.reportValidity()) return;
+  function createTextElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = String(text);
+    return element;
+  }
 
-    const button = $("#predictButton");
-    const errorBox = $("#predictionError");
-    const result = $("#predictionResult");
-    clearError(errorBox);
-    button.disabled = true;
-    button.innerHTML = '<span class="loader"></span> Consultando modelo…';
+  function renderPredictionPlaceholder(container) {
+    container.className = "surface-card result-card";
+    const content = createTextElement("div", "result-placeholder");
+    const illustration = createTextElement("div", "result-illustration");
+    illustration.append(
+      createTextElement("span", "result-ring"),
+      createTextElement("span", "result-heart", "♡"),
+      createTextElement("i", "result-spark spark-one", "✦"),
+      createTextElement("i", "result-spark spark-two", "✦"),
+    );
+    content.append(
+      illustration,
+      createTextElement("span", "result-eyebrow", "RESULTADO DEL MODELO"),
+      createTextElement("h3", "", "Tu resultado aparecerá aquí"),
+      createTextElement("p", "", "Completa los datos y consulta el servicio de predicción."),
+    );
+    container.replaceChildren(content);
+  }
 
-    const formData = new FormData(form);
-    const patient = Object.fromEntries([...formData.entries()].map(([key, value]) => [key, Number(value)]));
+  function renderClusterPlaceholder(container) {
+    container.className = "surface-card cluster-result-card";
+    const content = createTextElement("div", "cluster-result-placeholder");
+    content.append(
+      createTextElement("span", "result-eyebrow", "GRUPO DEL PACIENTE"),
+      createTextElement("h3", "", "El grupo aparecerá aquí"),
+      createTextElement("p", "", "Completa los datos para consultar su asignación a un grupo."),
+    );
+    container.replaceChildren(content);
+  }
 
-    try {
-      const data = await request(API.prediction, {
-        method: "POST",
-        body: JSON.stringify(patient),
-      });
-      renderPrediction(data, result);
-    } catch (error) {
-      showError(errorBox, error, "No fue posible obtener la predicción");
-      result.className = "surface-card result-card";
-      result.innerHTML = `<div class="result-placeholder"><div class="result-illustration"><span class="result-ring"></span><span class="result-heart">!</span></div><span class="result-eyebrow">SERVICIO NO DISPONIBLE</span><h3>No se pudo consultar<br />el modelo</h3><p>El backend aún no tiene disponible la ruta de predicción o no responde.</p></div>`;
-    } finally {
-      button.disabled = false;
-      button.innerHTML = 'Consultar al modelo <span aria-hidden="true">→</span>';
-    }
+  function clearPredictionPanels() {
+    renderPredictionPlaceholder($("#predictionResult"));
+    renderClusterPlaceholder($("#clusterResult"));
+    renderDecisionTreePlaceholder();
+  }
+
+  function renderPredictionLoading(container) {
+    container.className = "surface-card result-card";
+    const content = createTextElement("div", "result-placeholder");
+    content.append(
+      createTextElement("span", "loader"),
+      createTextElement("p", "", "Consultando el modelo…"),
+    );
+    container.replaceChildren(content);
+  }
+
+  function renderClusterLoading(container) {
+    container.className = "surface-card cluster-result-card";
+    const content = createTextElement("div", "cluster-result-loading");
+    content.append(
+      createTextElement("span", "loader"),
+      createTextElement("span", "", "Consultando el grupo…"),
+    );
+    container.replaceChildren(content);
+  }
+
+  function renderPredictionError(error, container) {
+    container.className = "surface-card result-card result-error";
+    const content = createTextElement("div", "result-placeholder");
+    content.append(
+      createTextElement("span", "result-outcome-icon", "!"),
+      createTextElement("span", "result-outcome-label", "SERVICIO NO DISPONIBLE"),
+      createTextElement("h3", "", "No se pudo consultar el modelo"),
+      createTextElement("p", "", `No fue posible obtener la clasificación: ${error.message}`),
+    );
+    container.replaceChildren(content);
+    renderDecisionTreeError(error);
+  }
+
+  function renderClusterError(error, container) {
+    container.className = "surface-card cluster-result-card";
+    const content = createTextElement("div", "cluster-result-error");
+    content.append(
+      createTextElement("span", "result-outcome-icon", "!"),
+      createTextElement("span", "result-outcome-label", "GRUPO NO DISPONIBLE"),
+      createTextElement("h3", "", "No se pudo asignar el grupo"),
+      createTextElement("p", "", error.message),
+    );
+    container.replaceChildren(content);
   }
 
   function renderPrediction(data, container) {
@@ -293,12 +490,370 @@
     const positive = ["positive", "positivo", "1", "true", "alto"].includes(normalized);
     const label = positive ? "Riesgo detectado" : "Sin riesgo detectado";
     const probability = data.probability ?? data.probabilidad;
-    const probabilityMarkup = probability === undefined
-      ? ""
-      : `<strong class="probability-value">${formatNumber(Number(probability) <= 1 ? Number(probability) * 100 : probability, 1)}%</strong><span class="probability-caption">Confianza de la clase predicha</span>`;
+    const content = createTextElement("div", "");
+
+    content.append(
+      createTextElement("span", "result-outcome-icon", positive ? "!" : "✓"),
+      createTextElement("span", "result-outcome-label", "RESULTADO DEL MODELO"),
+      createTextElement("h3", "", label),
+      createTextElement("span", "result-class-label", `Clase estimada: ${data.clase ?? rawPrediction}`),
+      createTextElement(
+        "p",
+        "",
+        positive
+          ? "La salida del modelo sugiere una clase positiva. Solicita valoración de un profesional de la salud."
+          : "La salida del modelo corresponde a una clase negativa. Esto no descarta una condición clínica.",
+      ),
+    );
+
+    if (probability !== undefined) {
+      const percentage = Number(probability) <= 1 ? Number(probability) * 100 : probability;
+      content.append(
+        createTextElement("strong", "probability-value", `${formatNumber(percentage, 1)}%`),
+        createTextElement("span", "probability-caption", "Confianza de la clase predicha"),
+      );
+    }
+
+    const probabilities = data.probabilities ?? data.probabilidades;
+    if (probabilities && typeof probabilities === "object") {
+      const chart = createTextElement("div", "prediction-probabilities");
+      Object.entries(probabilities).forEach(([className, rawValue]) => {
+        const value = Number(rawValue);
+        const percentage = value <= 1 ? value * 100 : value;
+        const row = createTextElement("div", "probability-row");
+        const track = createTextElement("span", "probability-track");
+        const fill = createTextElement("span", "probability-fill");
+        fill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+        track.append(fill);
+        row.append(
+          createTextElement("span", "probability-class", className),
+          track,
+          createTextElement("strong", "probability-percent", `${formatNumber(percentage, 1)}%`),
+        );
+        chart.append(row);
+      });
+      content.append(
+        createTextElement("span", "probability-caption", "Estimaciones del modelo por clase"),
+        chart,
+        createTextElement(
+          "p",
+          "probability-disclaimer",
+          "No son probabilidades clínicas calibradas ni constituyen un diagnóstico.",
+        ),
+      );
+    }
 
     container.className = `surface-card result-card ${positive ? "result-positive" : "result-negative"}`;
-    container.innerHTML = `<div><span class="result-outcome-icon">${positive ? "!" : "✓"}</span><span class="result-outcome-label">RESULTADO DEL MODELO</span><h3>${label}</h3><p>${positive ? "La salida del modelo sugiere una clase positiva. Solicita valoración de un profesional de la salud." : "La salida del modelo corresponde a una clase negativa. Esto no descarta una condición clínica."}</p>${probabilityMarkup}</div>`;
+    container.replaceChildren(content);
+  }
+
+  function renderDecisionTreePlaceholder(message = "Consulta un paciente para cargar la estructura real del árbol y resaltar su recorrido.") {
+    activeTreeView = null;
+    $("#decisionTreeMeta").textContent = "La visualización aparecerá después de consultar el modelo.";
+    $("#decisionTreeSvg").setAttribute("hidden", "");
+    $("#decisionTreePlaceholder").hidden = false;
+    $("#decisionTreePlaceholder").textContent = message;
+    $("#treeNodeDetail").textContent = "Selecciona un nodo del árbol para ver sus detalles.";
+  }
+
+  function renderDecisionTreeLoading() {
+    renderDecisionTreePlaceholder("Cargando la estructura del árbol y el recorrido del paciente…");
+  }
+
+  function renderDecisionTreeError(error) {
+    renderDecisionTreePlaceholder(`El árbol no está disponible: ${error.message}`);
+  }
+
+  function createSvgElement(tag, attributes = {}) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, String(value)));
+    return element;
+  }
+
+  function renderTreeNodeDetail(node) {
+    const detail = $("#treeNodeDetail");
+    const heading = node.es_hoja ? `Hoja ${node.id}` : `Nodo ${node.id}`;
+    detail.replaceChildren(
+      createTextElement("strong", "", heading),
+      createTextElement("span", "", `Muestras: ${numberFormat.format(node.muestras)}`),
+      createTextElement("span", "", `Clase del nodo: ${node.clase}`),
+      createTextElement(
+        "p",
+        "",
+        node.condicion_evaluada || node.condicion || "Nodo sin condición de división.",
+      ),
+    );
+  }
+
+  function renderDecisionTree(tree) {
+    if (!tree || !Array.isArray(tree.nodos) || !tree.nodos.length) {
+      throw new Error("La respuesta no contiene la estructura del árbol.");
+    }
+    const svg = $("#decisionTreeSvg");
+    const placeholder = $("#decisionTreePlaceholder");
+    const nodeById = new Map(tree.nodos.map((node) => [Number(node.id), node]));
+    const positions = new Map();
+    let leafIndex = 0;
+    let maxDepth = 0;
+
+    function placeNode(nodeId, depth) {
+      const node = nodeById.get(nodeId);
+      if (!node) return { x: 80 + leafIndex++ * 150, y: 60 + depth * 105 };
+      maxDepth = Math.max(maxDepth, depth);
+      const hasChildren = node.izquierda !== null && node.derecha !== null;
+      let x;
+      if (!hasChildren) {
+        x = 80 + leafIndex++ * 150;
+      } else {
+        const left = placeNode(Number(node.izquierda), depth + 1);
+        const right = placeNode(Number(node.derecha), depth + 1);
+        x = (left.x + right.x) / 2;
+      }
+      const point = { x, y: 60 + depth * 105 };
+      positions.set(nodeId, point);
+      return point;
+    }
+
+    placeNode(0, 0);
+    const width = Math.max(900, leafIndex * 150 + 80);
+    const height = Math.max(420, (maxDepth + 1) * 105 + 70);
+    svg.replaceChildren();
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+
+    tree.nodos.forEach((node) => {
+      const parent = positions.get(Number(node.id));
+      if (!parent || node.izquierda === null || node.derecha === null) return;
+      [
+        [Number(node.izquierda), "izquierda", "≤"],
+        [Number(node.derecha), "derecha", ">"],
+      ].forEach(([childId, branch, label]) => {
+        const child = positions.get(childId);
+        if (!child) return;
+        const edge = createSvgElement("line", {
+          x1: parent.x,
+          y1: parent.y + 26,
+          x2: child.x,
+          y2: child.y - 26,
+          class: node.visitado && nodeById.get(childId)?.visitado ? "tree-edge tree-edge-active" : "tree-edge",
+        });
+        svg.append(edge);
+        const branchLabel = createSvgElement("text", {
+          x: (parent.x + child.x) / 2,
+          y: (parent.y + child.y) / 2,
+          class: "tree-edge-label",
+        });
+        branchLabel.textContent = label;
+        svg.append(branchLabel);
+      });
+    });
+
+    tree.nodos.forEach((node) => {
+      const point = positions.get(Number(node.id));
+      if (!point) return;
+      const group = createSvgElement("g", {
+        transform: `translate(${point.x - 62}, ${point.y - 26})`,
+        class: `tree-node${node.visitado ? " is-visited" : ""}${node.es_hoja ? " is-leaf" : ""}${node.clase === "positive" ? " is-positive" : ""}`,
+        tabindex: "0",
+        role: "button",
+        "aria-label": `${node.es_hoja ? "Hoja" : "Nodo"} ${node.id}, ${node.variable || node.clase}, ${node.muestras} muestras`,
+      });
+      const title = createSvgElement("title");
+      title.textContent = node.condicion_evaluada || node.condicion || `Clase ${node.clase}`;
+      const rect = createSvgElement("rect", { width: 124, height: 52, rx: 7 });
+      const firstLine = createSvgElement("text", { x: 62, y: 17, class: "tree-node-label" });
+      firstLine.textContent = node.es_hoja ? `Hoja · ${node.clase}` : String(node.variable);
+      const secondLine = createSvgElement("text", { x: 62, y: 32, class: "tree-node-condition" });
+      secondLine.textContent = node.es_hoja ? `Nodo ${node.id}` : `≤ ${formatNumber(node.umbral, 3)}`;
+      const thirdLine = createSvgElement("text", { x: 62, y: 45, class: "tree-node-samples" });
+      thirdLine.textContent = `n = ${numberFormat.format(node.muestras)}`;
+      group.append(title, rect, firstLine, secondLine, thirdLine);
+      group.addEventListener("click", () => renderTreeNodeDetail(node));
+      group.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          renderTreeNodeDetail(node);
+        }
+      });
+      svg.append(group);
+    });
+
+    const pathNodes = tree.nodos.filter((node) => node.visitado);
+    const pathPoints = pathNodes.map((node) => positions.get(Number(node.id))).filter(Boolean);
+    const minX = Math.min(...pathPoints.map((point) => point.x));
+    const maxX = Math.max(...pathPoints.map((point) => point.x));
+    const focus = {
+      x: Math.max(0, minX - 180),
+      y: 0,
+      width: Math.min(width, Math.max(900, maxX - minX + 360)),
+      height,
+    };
+    focus.x = Math.min(focus.x, width - focus.width);
+    activeTreeView = { svg, width, height, focus, current: { ...focus } };
+    applyTreeView();
+    let panStart = null;
+    svg.addEventListener("pointerdown", (event) => {
+      if (event.target.closest(".tree-node")) return;
+      panStart = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        view: { ...activeTreeView.current },
+      };
+      svg.setPointerCapture(event.pointerId);
+    });
+    svg.addEventListener("pointermove", (event) => {
+      if (!panStart || event.pointerId !== panStart.pointerId) return;
+      const bounds = svg.getBoundingClientRect();
+      activeTreeView.current = {
+        ...panStart.view,
+        x: Math.max(0, Math.min(
+          width - panStart.view.width,
+          panStart.view.x - (event.clientX - panStart.x) * panStart.view.width / bounds.width,
+        )),
+        y: Math.max(0, Math.min(
+          height - panStart.view.height,
+          panStart.view.y - (event.clientY - panStart.y) * panStart.view.height / bounds.height,
+        )),
+      };
+      applyTreeView();
+    });
+    svg.addEventListener("pointerup", () => { panStart = null; });
+    svg.addEventListener("pointercancel", () => { panStart = null; });
+    $("#decisionTreeMeta").textContent =
+      `Árbol ${tree.indice_arbol} de ${tree.total_arboles} · profundidad ${tree.profundidad} · ${tree.total_nodos} nodos`;
+    $("#treeNodeDetail").textContent =
+      `Recorrido resaltado: ${pathNodes.length} nodos; hoja alcanzada ${tree.nodo_hoja}. Selecciona un nodo para ver sus detalles.`;
+    placeholder.hidden = true;
+    svg.removeAttribute("hidden");
+  }
+
+  function applyTreeView() {
+    if (!activeTreeView) return;
+    const { current, svg } = activeTreeView;
+    svg.setAttribute("viewBox", `${current.x} ${current.y} ${current.width} ${current.height}`);
+  }
+
+  function zoomDecisionTree(action) {
+    if (!activeTreeView) return;
+    const view = activeTreeView.current;
+    if (action === "reset") {
+      activeTreeView.current = { ...activeTreeView.focus };
+    } else {
+      const factor = action === "in" ? 0.8 : 1.25;
+      const width = Math.min(activeTreeView.width, Math.max(300, view.width * factor));
+      const height = Math.min(activeTreeView.height, Math.max(240, view.height * factor));
+      activeTreeView.current = {
+        x: Math.max(0, Math.min(activeTreeView.width - width, view.x + (view.width - width) / 2)),
+        y: Math.max(0, Math.min(activeTreeView.height - height, view.y + (view.height - height) / 2)),
+        width,
+        height,
+      };
+    }
+    applyTreeView();
+  }
+
+  function renderCluster(data, container) {
+    if (typeof data.nombre !== "string" || !data.perfil) {
+      throw new Error("La respuesta de clustering no contiene el nombre y perfil del grupo.");
+    }
+
+    const content = createTextElement("div", "");
+    const heading = createTextElement("div", "cluster-result-heading");
+    const headingText = createTextElement("div", "");
+    headingText.append(
+      createTextElement("span", "result-eyebrow", "GRUPO DEL PACIENTE"),
+      createTextElement("h3", "cluster-result-name", data.nombre),
+    );
+    heading.append(
+      headingText,
+      createTextElement("span", "cluster-result-id", `Grupo ${data.cluster_id}`),
+    );
+
+    const summary = createTextElement("div", "cluster-summary-grid");
+    const patientCount = createTextElement("div", "cluster-summary-item");
+    patientCount.append(
+      createTextElement("span", "", "Pacientes en el grupo"),
+      createTextElement("strong", "", formatNumber(data.pacientes_en_grupo, 0)),
+    );
+    const infarctRate = createTextElement("div", "cluster-summary-item");
+    infarctRate.append(
+      createTextElement("span", "", "Infartos en el grupo"),
+      createTextElement("strong", "", `${formatNumber(data.pct_infarto_en_grupo, 2)}%`),
+    );
+    summary.append(patientCount, infarctRate);
+
+    const profileTitle = createTextElement("h4", "cluster-profile-title", "Perfil del grupo");
+    const profile = createTextElement("div", "cluster-profile-grid");
+    [
+      ["Edad media", data.perfil.edad],
+      ["Pulso medio", data.perfil.pulso],
+      ["Presión sistólica media", data.perfil.sistolica],
+      ["Presión diastólica media", data.perfil.diastolica],
+      ["Glucosa media", data.perfil.glucosa],
+      ["Mediana CK-MB", data.perfil.ckmb_mediana],
+      ["Mediana troponina", data.perfil.troponina_mediana],
+    ].forEach(([label, value]) => {
+      const item = createTextElement("div", "cluster-profile-item");
+      item.append(
+        createTextElement("span", "", label),
+        createTextElement("strong", "", formatNumber(value)),
+      );
+      profile.append(item);
+    });
+
+    content.append(
+      heading,
+      summary,
+      profileTitle,
+      profile,
+      createTextElement("p", "cluster-disclaimer", CLUSTER_DISCLAIMER),
+    );
+    container.className = "surface-card cluster-result-card";
+    container.replaceChildren(content);
+  }
+
+  async function submitPrediction(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) {
+      clearPredictionPanels();
+      return;
+    }
+
+    const button = $("#predictButton");
+    const buttonLabel = $("#predictButtonLabel");
+    const predictionResult = $("#predictionResult");
+    const clusterResult = $("#clusterResult");
+    const formData = new FormData(form);
+    const patient = Object.fromEntries([...formData.entries()].map(([key, value]) => [key, Number(value)]));
+    const requestOptions = {
+      method: "POST",
+      body: JSON.stringify(patient),
+    };
+
+    button.disabled = true;
+    buttonLabel.textContent = "Consultando modelos…";
+    renderPredictionLoading(predictionResult);
+    renderClusterLoading(clusterResult);
+
+    const predictionRequest = request(API.prediction, requestOptions)
+      .then((data) => {
+        renderPrediction(data, predictionResult);
+        renderDecisionTree(data.explicacion_arbol);
+      })
+      .catch((error) => renderPredictionError(error, predictionResult));
+    const clusterRequest = request(API.clusterAssignment, requestOptions)
+      .then((data) => renderCluster(data, clusterResult))
+      .catch((error) => renderClusterError(error, clusterResult));
+
+    renderDecisionTreeLoading();
+    try {
+      await Promise.all([predictionRequest, clusterRequest]);
+    } finally {
+      button.disabled = false;
+      buttonLabel.textContent = "Consultar modelo";
+    }
   }
 
   function escapeHtml(value) {
@@ -319,7 +874,10 @@
     history.replaceState(null, "", `#${tabId}`);
     $("#sidebar").classList.remove("open");
     $("#sidebarScrim").classList.remove("visible");
-    if (tabId === "clustering") loadClustering();
+    if (tabId === "clustering") {
+      loadClustering();
+      loadDbscanAnalysis();
+    }
     if (tabId === "classification") loadClassification();
   }
 
@@ -340,7 +898,15 @@
       button.addEventListener("click", () => switchTab(button.dataset.openTab));
     });
     $("#refreshButton").addEventListener("click", loadOverview);
+    $("#predictionForm").addEventListener("invalid", clearPredictionPanels, true);
     $("#predictionForm").addEventListener("submit", submitPrediction);
+    $("#dbscanForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (event.currentTarget.reportValidity()) loadDbscanAnalysis();
+    });
+    document.querySelectorAll("[data-tree-zoom]").forEach((button) => {
+      button.addEventListener("click", () => zoomDecisionTree(button.dataset.treeZoom));
+    });
     $("#dendrogramImage").addEventListener("error", () => {
       $("#dendrogramImage").hidden = true;
       $("#dendrogramFallback").hidden = false;

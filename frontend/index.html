@@ -250,20 +250,49 @@
               <table><thead><tr><th>CLÚSTER</th><th>PACIENTES</th><th>EDAD MEDIA</th><th>PULSO MEDIO</th><th>PA SISTÓLICA</th><th>GLUCOSA</th><th>CK-MB MED.</th><th>TROPONINA MED.</th><th>INFARTO</th></tr></thead><tbody id="clusterProfiles"><tr><td colspan="9"><div class="empty-state"><span>◷</span><b>Esperando endpoint de perfiles</b><small>Los perfiles clínicos se consultan al backend, no se calculan en el navegador.</small></div></td></tr></tbody></table>
             </div>
           </article>
+          <section class="outlier-section" aria-labelledby="dbscanTitle">
+            <div class="page-heading outlier-heading">
+              <div><div class="eyebrow"><span class="eyebrow-dot"></span> DETECCIÓN DE OBSERVACIONES ATÍPICAS</div><h2 id="dbscanTitle">Análisis de pacientes atípicos (DBSCAN)</h2><p class="page-description">Perfil comparativo de observaciones de ruido y pacientes en regiones densas.</p></div>
+              <form class="dbscan-controls" id="dbscanForm">
+                <label class="field"><span>eps</span><input name="eps" type="number" min="0.01" max="20" step="0.01" value="2" required /></label>
+                <label class="field"><span>min_samples</span><input name="min_samples" type="number" min="2" max="5000" step="1" value="14" required /></label>
+                <button class="button button-secondary" type="submit" id="dbscanSubmit">Actualizar análisis</button>
+              </form>
+            </div>
+            <div class="notice notice-info" id="dbscanStatus" role="status" aria-live="polite">Cargando resultados DBSCAN…</div>
+            <div class="dbscan-metric-grid" aria-live="polite">
+              <article class="metric-card"><div class="metric-top"><span class="metric-icon blue-icon">∑</span><span class="metric-caption">PACIENTES ANALIZADOS</span></div><div class="metric-value" id="dbscanTotal">—</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-icon violet-icon">⌁</span><span class="metric-caption">IDENTIFICADOS COMO RUIDO</span></div><div class="metric-value" id="dbscanNoise">—</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-icon mint-icon">%</span><span class="metric-caption">PORCENTAJE ATÍPICO</span></div><div class="metric-value" id="dbscanOutlierPct">—</div></article>
+              <article class="metric-card"><div class="metric-top"><span class="metric-icon blue-icon">●</span><span class="metric-caption">PACIENTES EN REGIONES DENSAS</span></div><div class="metric-value" id="dbscanDense">—</div></article>
+            </div>
+            <article class="surface-card table-card dbscan-profile-card">
+              <div class="card-heading"><div><h3>Perfil de pacientes atípicos y grupo denso</h3><p>Comparación estadística de las características clínicas devuelta por DBSCAN</p></div><span class="table-hint" id="dbscanParameters">eps = 2.0 · min_samples = 14</span></div>
+              <div class="table-wrap">
+                <table><thead><tr><th>GRUPO</th><th>PACIENTES</th><th>EDAD MEDIA</th><th>PULSO MEDIO</th><th>PA SISTÓLICA MEDIA</th><th>PA DIASTÓLICA MEDIA</th><th>GLUCOSA MEDIA</th><th>CK-MB MEDIANA</th><th>TROPONINA MEDIANA</th><th>POSITIVOS</th></tr></thead><tbody id="dbscanComparison"><tr><td colspan="10"><div class="empty-state"><span>◷</span><b>Esperando resultados DBSCAN</b><small>La tabla se completará con los datos del backend.</small></div></td></tr></tbody></table>
+              </div>
+            </article>
+            <div class="dbscan-chart-grid" id="dbscanCharts" aria-label="Gráficos comparativos DBSCAN">
+              <div class="empty-state"><span>◷</span><b>Esperando gráficos</b><small>Las comparaciones se generan con estadísticas del backend.</small></div>
+            </div>
+            <p class="methodology-note" id="dbscanExplanation"></p>
+          </section>
         </section>
 
         <section class="page-section" id="classification" aria-labelledby="classificationTitle">
           <div class="page-heading">
-            <div><div class="eyebrow"><span class="eyebrow-dot"></span> APRENDIZAJE SUPERVISADO</div><h1 id="classificationTitle">Modelo de clasificación</h1><p class="page-description">Rendimiento del modelo Random Forest y variables con mayor contribución.</p></div>
+            <div><div class="eyebrow"><span class="eyebrow-dot"></span> APRENDIZAJE SUPERVISADO</div><h1 id="classificationTitle">Modelo de clasificación</h1><p class="page-description">Rendimiento del modelo Random Forest y variables con mayor contribución.</p><p class="model-configuration" id="modelConfiguration">Configuración reportada por el backend.</p></div>
             <span class="model-status"><span class="status-dot"></span> Random Forest</span>
           </div>
           <div class="notice notice-info" id="classificationNotice">
-            <span class="notice-symbol">i</span><span><strong>Conectando con el módulo de clasificación.</strong> Publica la ruta de resultados del modelo para mostrar métricas verificadas.</span>
+            <span class="notice-symbol">i</span><span><strong>Conectando con el módulo de clasificación.</strong> Las métricas se cargarán desde la evaluación del backend.</span>
           </div>
           <div class="model-metric-grid">
             <article class="metric-card model-score-card"><div class="metric-top"><span class="metric-icon mint-icon">◎</span><span class="metric-caption">EXACTITUD</span></div><div class="metric-value" id="modelAccuracy">—</div><div class="metric-foot"><span>Evaluación en conjunto de prueba</span></div></article>
-            <article class="metric-card"><div class="metric-top"><span class="metric-icon blue-icon">▦</span><span class="metric-caption">MUESTRAS DE PRUEBA</span></div><div class="metric-value" id="testSamples">—</div><div class="metric-foot"><span>Según el reporte del modelo</span></div></article>
-            <article class="metric-card"><div class="metric-top"><span class="metric-icon violet-icon">⌁</span><span class="metric-caption">PREDICTORES</span></div><div class="metric-value" id="predictorCount">—</div><div class="metric-foot"><span>Variables de entrada reportadas</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon blue-icon">P</span><span class="metric-caption">PRECISIÓN POSITIVA</span></div><div class="metric-value" id="modelPrecision">—</div><div class="metric-foot"><span>Clase positive · conjunto de prueba</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon violet-icon">R</span><span class="metric-caption">RECALL POSITIVO</span></div><div class="metric-value" id="modelRecall">—</div><div class="metric-foot"><span>Clase positive · conjunto de prueba</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon mint-icon">F1</span><span class="metric-caption">F1-SCORE POSITIVO</span></div><div class="metric-value" id="modelF1">—</div><div class="metric-foot"><span>Clase positive · conjunto de prueba</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon blue-icon">▦</span><span class="metric-caption">MUESTRAS DE PRUEBA</span></div><div class="metric-value" id="testSamples">—</div><div class="metric-foot"><span>Evaluación independiente del entrenamiento</span></div></article>
           </div>
           <div class="classification-grid">
             <article class="surface-card confusion-card">
@@ -284,7 +313,7 @@
 
         <section class="page-section" id="prediction" aria-labelledby="predictionTitle">
           <div class="page-heading">
-            <div><div class="eyebrow"><span class="eyebrow-dot"></span> EXPLORACIÓN INTERACTIVA</div><h1 id="predictionTitle">Demo de predicción</h1><p class="page-description">Envía parámetros clínicos al modelo del backend para consultar su estimación.</p></div>
+            <div><div class="eyebrow"><span class="eyebrow-dot"></span> EXPLORACIÓN INTERACTIVA</div><h1 id="predictionTitle">Consultar modelo de clasificación</h1><p class="page-description">Envía parámetros clínicos al modelo del backend para consultar su estimación.</p></div>
             <span class="demo-badge"><span>✦</span> DEMO ACADÉMICA</span>
           </div>
           <div class="prediction-layout">
@@ -305,7 +334,7 @@
                   <label class="field"><span>Troponina <i>(ng/mL)</i></span><div class="input-wrap"><input name="Troponin" type="number" min="0" step="any" placeholder="Ej. 0.04" required /><span class="input-unit">ng/mL</span></div></label>
                 </div>
                 <div class="form-disclaimer"><span>ⓘ</span> La predicción es experimental y no constituye diagnóstico ni recomendación médica.</div>
-                <button class="button button-primary submit-button" type="submit" id="predictButton">Consultar al modelo <span aria-hidden="true">→</span></button>
+                <button class="button button-primary submit-button" type="submit" id="predictButton"><span id="predictButtonLabel">Consultar modelo</span><span aria-hidden="true">→</span></button>
               </form>
             </article>
             <aside class="prediction-aside">
@@ -317,6 +346,13 @@
                   <p>Completa los datos y consulta el servicio de predicción.</p>
                 </div>
               </article>
+              <article class="surface-card cluster-result-card" id="clusterResult" aria-live="polite" aria-atomic="true">
+                <div class="cluster-result-placeholder">
+                  <span class="result-eyebrow">GRUPO DEL PACIENTE</span>
+                  <h3>El grupo aparecerá aquí</h3>
+                  <p>Completa los datos para consultar su asignación a un grupo.</p>
+                </div>
+              </article>
               <article class="note-card">
                 <span class="note-card-icon">⌘</span>
                 <div><strong>Cómo funciona</strong><p>El navegador envía las variables al servidor. El modelo procesa los datos y devuelve la predicción; no se realizan cálculos en esta interfaz.</p></div>
@@ -324,7 +360,23 @@
               <div class="privacy-line"><span>♧</span> No ingreses información identificable de pacientes reales.</div>
             </aside>
           </div>
-          <div class="data-error" id="predictionError" role="status" hidden></div>
+          <article class="surface-card decision-tree-card" id="decisionTreeCard" aria-live="polite">
+            <div class="card-heading decision-tree-heading">
+              <div><h2>Recorrido en un árbol del Random Forest</h2><p id="decisionTreeMeta">La visualización aparecerá después de consultar el modelo.</p></div>
+              <div class="tree-controls" aria-label="Controles de visualización del árbol">
+                <button class="icon-button" type="button" data-tree-zoom="out" aria-label="Reducir zoom">−</button>
+                <button class="icon-button" type="button" data-tree-zoom="reset" aria-label="Restablecer zoom">Ajustar</button>
+                <button class="icon-button" type="button" data-tree-zoom="in" aria-label="Aumentar zoom">+</button>
+              </div>
+            </div>
+            <p class="tree-disclaimer">Esta visualización corresponde a un árbol individual del Random Forest. La predicción final del modelo se obtiene mediante la combinación de los resultados de sus 100 árboles.</p>
+            <div class="tree-legend"><span><i class="tree-legend-path"></i> Recorrido del paciente</span><span><i class="tree-legend-node"></i> Nodo no visitado</span><span><i class="tree-legend-leaf"></i> Hoja terminal</span></div>
+            <div class="tree-viewport" id="decisionTreeViewport" aria-label="Árbol de decisión interactivo">
+              <div class="tree-placeholder" id="decisionTreePlaceholder">Consulta un paciente para cargar la estructura real del árbol y resaltar su recorrido.</div>
+              <svg id="decisionTreeSvg" role="img" aria-label="Estructura del árbol seleccionado" hidden></svg>
+            </div>
+            <div class="tree-node-detail" id="treeNodeDetail" aria-live="polite">Selecciona un nodo del árbol para ver sus detalles.</div>
+          </article>
         </section>
 
         <footer class="app-footer"><span>CardioLab <i>·</i> Proyecto académico de Machine Learning</span><span>Uso educativo · No destinado a diagnóstico clínico</span></footer>

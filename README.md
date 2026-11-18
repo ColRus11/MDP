@@ -1,9 +1,9 @@
 # Análisis cardiovascular: MDP y CardioLab
 
-Este repositorio reúne dos desarrollos académicos basados en el conjunto
+Este repositorio reúne tres desarrollos académicos basados en el conjunto
 `Medicaldataset.csv`: un modelo de decisión de Markov para estudiar estrategias
-de triaje y una aplicación de análisis que combina métodos de aprendizaje
-automático con una interfaz web.
+de triaje, CardioLab para explorar datos y modelos de aprendizaje automático,
+y un prototipo de triaje con aprendizaje por refuerzo profundo.
 
 El trabajo tiene fines educativos y de exploración metodológica. Sus salidas no
 constituyen diagnósticos ni recomendaciones clínicas.
@@ -28,16 +28,25 @@ La carpeta `backend/` contiene una API en FastAPI y módulos para:
   estandarización;
 - explorar agrupamientos K-Means y jerárquicos mediante perfiles clínicos,
   silhouette, índice de Dunn y correlación cofenética;
-- entrenar un clasificador Random Forest y obtener predicciones experimentales.
+- entrenar un clasificador Random Forest y obtener predicciones experimentales;
+- detectar observaciones atípicas con DBSCAN y comparar sus perfiles con el
+  resto del conjunto.
 
 La carpeta `frontend/` contiene una interfaz estática en HTML, CSS y JavaScript.
-Consulta los endpoints disponibles para mostrar el resumen y las estadísticas,
-y permite enviar datos a la ruta de predicción.
+Consulta la API para presentar el resumen y las estadísticas de los datos, las
+métricas del clasificador, las probabilidades estimadas por clase, los análisis
+DBSCAN y la asignación del paciente a un grupo K-Means. La explicación
+individual incluye el recorrido del paciente en un árbol del bosque. La
+transformación de datos, el entrenamiento y los cálculos se realizan en Python;
+el navegador se limita a enviar entradas y presentar respuestas.
 
-En esta versión, las vistas de clustering y del resumen del clasificador también
-solicitan rutas que aún no están implementadas en la API
-(`/api/b1/clustering/jerarquico`, `/api/b1/clustering/perfiles` y
-`/api/b1/clasificacion/resumen`). Esos paneles pueden permanecer pendientes.
+### Taller 3: aprendizaje por refuerzo profundo
+
+`taller3_dqn/` contiene una aplicación independiente de triaje que compara un
+agente Q-Learning tabular con una Deep Q-Network (DQN). La red utiliza
+Experience Replay y una red objetivo; el subproyecto también incluye el código
+de entrenamiento, experimentos, resultados y un cuaderno de trabajo. Sus
+decisiones son demostrativas y no sustituyen la evaluación clínica.
 
 ## Datos
 
@@ -60,10 +69,15 @@ en [`requirements.txt`](requirements.txt):
 - NumPy, pandas y SciPy para manipulación de datos y cálculos numéricos;
 - scikit-learn para clasificación, agrupamiento y métricas;
 - Matplotlib para generar figuras;
-- Joblib para los scripts de modelado existentes en la raíz.
+- Joblib para guardar y cargar modelos.
 
 El frontend no requiere paquetes de Node.js ni un proceso de compilación; utiliza
 HTML, CSS y JavaScript nativos.
+
+El proyecto DQN mantiene dependencias separadas en
+[`taller3_dqn/requirements.txt`](taller3_dqn/requirements.txt), entre ellas
+PyTorch, Streamlit, Altair y Jupyter. No es necesario instalarlas para ejecutar
+el MDP de la raíz o CardioLab.
 
 ### Instalación
 
@@ -85,6 +99,22 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+## Ejecución del taller DQN
+
+Para instalar y ejecutar la aplicación DQN, use un entorno virtual independiente:
+
+```bash
+cd taller3_dqn
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+streamlit run app.py
+```
+
+La aplicación se abrirá en `http://localhost:8501`. Para volver a ejecutar los
+experimentos y generar sus artefactos, ejecute `python entrenar.py`. El cuaderno
+`Taller3_DQN_PersonaB.ipynb` presenta el desarrollo paso a paso.
+
 ## Ejecución de CardioLab
 
 Desde la raíz, inicie la API:
@@ -101,7 +131,19 @@ La documentación interactiva de FastAPI queda disponible en
 | `GET` | `/api/salud` | Comprobación del servicio |
 | `GET` | `/api/b1/datos/resumen` | Dimensiones, nulos, duplicados y distribución de la etiqueta |
 | `GET` | `/api/b1/datos/estadisticas` | Estadísticos descriptivos de las variables |
-| `POST` | `/api/b1/clasificacion/predecir` | Predicción experimental para un registro |
+| `GET` | `/api/b1/clasificacion/resumen` | Métricas sobre el conjunto de prueba e importancia de variables |
+| `POST` | `/api/b1/clasificacion/predecir` | Predicción, estimaciones por clase y recorrido en un árbol del Random Forest |
+| `POST` | `/api/b1/clustering/asignar` | Asignación K-Means y perfil del grupo de entrenamiento |
+| `GET` | `/api/b1/dbscan/analisis` | Perfil comparativo de ruido y resto (`eps` y `min_samples` configurables) |
+
+El Random Forest se entrena una sola vez por proceso y se reutiliza para la
+predicción y el reporte de evaluación. La visualización representa un árbol del
+bosque, no el modelo completo; la predicción final combina sus 100 árboles.
+El modelo y los resultados de evaluación se guardan en
+`backend/models/random_forest.joblib`; el artefacto se invalida si cambian la
+configuración, la versión de scikit-learn o el hash del conjunto de datos.
+Las predicciones y los grupos DBSCAN son resultados experimentales, no
+diagnósticos clínicos.
 
 En otra terminal, sirva la carpeta del proyecto para abrir la interfaz:
 
@@ -141,21 +183,31 @@ python grafica_politica.py
 El subproyecto `taller3_dqn/` conserva su propio archivo de dependencias y sus
 instrucciones de ejecución en su README.
 
+Las pruebas focalizadas del endpoint de asignación pueden ejecutarse así:
+
+```bash
+cd backend
+python3 -m unittest discover -s tests -v
+```
+
 ## Estructura principal
 
 ```text
 .
 ├── backend/
-│   ├── bloque01/       # Datos, clustering, clasificación y rutas de la API
+│   ├── bloque01/       # Datos, clustering, clasificación, esquemas y rutas
+│   ├── chequeo.py      # Tabla cruzada de una partición jerárquica
 │   ├── data/           # Conjunto de datos utilizado por CardioLab
-│   ├── figuras/        # Dendrograma de referencia
+│   ├── figuras/        # Dendrograma y gráfica de k-distancias
+│   ├── tests/          # Pruebas de clustering y análisis de modelos
 │   └── main.py         # Aplicación FastAPI
 ├── frontend/           # Interfaz web estática
 ├── taller3_dqn/        # Extensión de aprendizaje por refuerzo profundo
 ├── estados.py          # Preparación de estados para el MDP
 ├── recompensa.py       # Matriz de recompensa
 ├── transiciones.py     # Estimación de transiciones
-└── politica_mdp.py     # Iteración de valor y política
+├── politica_mdp.py     # Iteración de valor y política
+└── grafica_politica.py # Visualización de la política
 ```
 
 ## Alcance

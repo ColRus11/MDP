@@ -1,25 +1,22 @@
 from functools import lru_cache
 
-import numpy as np
-import pandas as pd
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Query
 
-from .clasificacion import VARIABLES_LOG, VARIABLES_PREDICTORAS, entrenar_random_forest
+from .clasificacion import (
+    consultar_paciente,
+    entrenar_random_forest,
+    obtener_configuracion_modelo,
+)
+from .clustering import asignar_cluster
+from .dbscan import analizar_pacientes_atipicos
 from .datos import estadisticas_datos, resumen_datos
-
+from .esquemas import (
+    AsignacionClusterResponse,
+    DatosPaciente,
+    DatosPacienteCluster,
+)
 
 router = APIRouter(prefix="/api/b1", tags=["bloque01"])
-
-
-class DatosPaciente(BaseModel):
-    edad: float = Field(alias="Age", gt=0, le=120)
-    frecuencia_cardiaca: float = Field(alias="Heart rate", gt=0, le=300)
-    presion_sistolica: float = Field(alias="Systolic blood pressure", gt=0, le=350)
-    presion_diastolica: float = Field(alias="Diastolic blood pressure", gt=0, le=250)
-    glucosa: float = Field(alias="Blood sugar", gt=0, le=2000)
-    ck_mb: float = Field(alias="CK-MB", ge=0)
-    troponina: float = Field(alias="Troponin", ge=0)
 
 
 @lru_cache(maxsize=1)
@@ -38,18 +35,58 @@ def datos_estadisticas():
 
 
 @router.post("/clasificacion/predecir")
-def predecir_paciente(paciente: DatosPaciente):
-    datos = paciente.dict(by_alias=True)
-    entrada = pd.DataFrame([datos], columns=VARIABLES_PREDICTORAS)
-    for variable in VARIABLES_LOG:
-        entrada[variable] = np.log(entrada[variable] + 1e-5)
-
-    modelo = _obtener_modelo()
-    prediccion = str(modelo.predict(entrada)[0])
-    probabilidades = modelo.predict_proba(entrada)[0]
-    indice_prediccion = list(modelo.classes_).index(prediccion)
-
+def predecir_paciente(
+    paciente: DatosPaciente,
+    indice_arbol: int = Query(default=0, ge=0, le=99),
+):
+    resultado = consultar_paciente(
+        _obtener_modelo(),
+        paciente.model_dump(by_alias=True),
+        indice_arbol=indice_arbol,
+    )
+    clase_predicha = resultado["clase"]
     return {
-        "prediction": prediccion,
-        "probability": float(probabilidades[indice_prediccion]),
+        "prediction": str(resultado["prediccion"]),
+        "probability": resultado["probabilidades"][clase_predicha],
+        "clase": clase_predicha,
+        "probabilities": resultado["probabilidades"],
+        "explicacion_arbol": resultado["explicacion_arbol"],
     }
+
+
+@router.get("/clasificacion/resumen")
+def resumen_clasificacion():
+    resultados = entrenar_random_forest()
+    importancias = resultados["feature_importances"]
+    return {
+        "accuracy": float(resultados["accuracy"]),
+        "precision": float(resultados["precision"]),
+        "recall": float(resultados["recall"]),
+        "f1_score": float(resultados["f1_score"]),
+        "test_samples": int(resultados["test_samples"]),
+        "clases": ["negative", "positive"],
+        "confusion_matrix": resultados["confusion_matrix"].tolist(),
+        "classification_report": resultados["classification_report_dict"],
+        "feature_importances": [
+            {"variable": str(variable), "importance": float(valor)}
+            for variable, valor in importancias.items()
+        ],
+        "n_estimators": len(resultados["modelo"].estimators_),
+        "configuracion": obtener_configuracion_modelo(),
+    }
+
+
+@router.post(
+    "/clustering/asignar",
+    response_model=AsignacionClusterResponse,
+)
+def asignar_cluster_paciente(paciente: DatosPacienteCluster):
+    return asignar_cluster(paciente.model_dump(by_alias=True))
+
+
+@router.get("/dbscan/analisis")
+def analisis_dbscan(
+    eps: float = Query(default=2.0, gt=0, le=20),
+    min_samples: int = Query(default=14, ge=2, le=5000),
+):
+    return analizar_pacientes_atipicos(eps=eps, min_samples=min_samples)
