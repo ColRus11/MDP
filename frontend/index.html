@@ -156,11 +156,11 @@
             <div class="card-heading"><div><h3>Recorrido del sistema</h3><p>Cada etapa alimenta a la siguiente. Selecciona una para abrir su análisis.</p></div><span class="chart-badge">6 ETAPAS</span></div>
             <div class="pipeline-track">
               <button class="pipeline-step" type="button" data-open-tab="overview"><span class="step-number">1</span><b>Datos</b><span>Limpieza y exploración del Medical Dataset.</span><em>BASE</em></button>
-              <button class="pipeline-step" type="button" data-open-tab="clustering"><span class="step-number">2</span><b>No supervisado</b><span>K-Means, jerárquico y DBSCAN: perfiles clínicos sin etiqueta.</span><em>PERSONA A</em></button>
-              <button class="pipeline-step" type="button" data-open-tab="classification"><span class="step-number">3</span><b>Clasificación</b><span>Random Forest que predice infarto (sí / no).</span><em>PERSONA A</em></button>
-              <button class="pipeline-step" type="button" data-open-tab="regression"><span class="step-number">4</span><b>Regresión</b><span>Riesgo continuo de infarto (0–1) que calibra la decisión.</span><em>PERSONA B</em></button>
-              <button class="pipeline-step" type="button" data-open-tab="mdp"><span class="step-number">5</span><b>MDP</b><span>Iteración de valor sobre 4 estados de riesgo y 3 acciones.</span><em>PERSONA B</em></button>
-              <button class="pipeline-step" type="button" data-open-tab="rl"><span class="step-number">6</span><b>Q-Learning → DQN</b><span>De la tabla Q a una red neuronal con estado continuo.</span><em>PERSONA B · C</em></button>
+              <button class="pipeline-step" type="button" data-open-tab="clustering"><span class="step-number">2</span><b>No supervisado</b><span>K-Means, jerárquico y DBSCAN: perfiles clínicos sin etiqueta.</span><em>NO SUPERVISADO</em></button>
+              <button class="pipeline-step" type="button" data-open-tab="classification"><span class="step-number">3</span><b>Clasificación</b><span>Random Forest que predice infarto (sí / no).</span><em>SUPERVISADO</em></button>
+              <button class="pipeline-step" type="button" data-open-tab="regression"><span class="step-number">4</span><b>Regresión</b><span>Riesgo continuo de infarto (0–1) que calibra la decisión.</span><em>SUPERVISADO</em></button>
+              <button class="pipeline-step" type="button" data-open-tab="mdp"><span class="step-number">5</span><b>MDP</b><span>Iteración de valor sobre 4 estados de riesgo y 3 acciones.</span><em>REFUERZO</em></button>
+              <button class="pipeline-step" type="button" data-open-tab="rl"><span class="step-number">6</span><b>Q-Learning → DQN</b><span>De la tabla Q a una red neuronal con estado continuo.</span><em>REFUERZO</em></button>
             </div>
           </article>
 
@@ -175,11 +175,11 @@
               <div class="callout">El error más costoso es el <strong>falso negativo</strong>: enviar a Verde a un paciente con infarto. Toda la recompensa del sistema está diseñada para evitarlo.</div>
             </article>
             <article class="surface-card">
-              <div class="card-heading"><div><h3>Equipo y responsabilidades</h3><p>Cada integrante desarrolló un corte completo del pipeline.</p></div><span class="chart-badge">EQUIPO</span></div>
+              <div class="card-heading"><div><h3>Equipo</h3><p>Proyecto desarrollado en conjunto, de los datos a la política del agente.</p></div><span class="chart-badge">EQUIPO</span></div>
               <div class="team-list">
-                <div class="team-member"><span class="avatar">A</span><div><b>Jeancarlo Rodríguez</b><span>No supervisado (K-Means, jerárquico, DBSCAN) y clasificación (Random Forest).</span></div></div>
-                <div class="team-member"><span class="avatar">B</span><div><b>Juan Esteban Martínez</b><span>Regresión, MDP con iteración de valor y Q-Learning tabular.</span></div></div>
-                <div class="team-member"><span class="avatar">C</span><div><b>Sebastián Díaz</b><span>DQN, introducción, conclusiones y ensamblado de la aplicación.</span></div></div>
+                <div class="team-member"><span class="avatar">JR</span><div><b>Jeancarlo Rodríguez</b></div></div>
+                <div class="team-member"><span class="avatar">JM</span><div><b>Juan Esteban Martínez</b></div></div>
+                <div class="team-member"><span class="avatar">SD</span><div><b>Sebastián Díaz</b></div></div>
               </div>
               <p class="figure-caption">Variables clave: troponina y CK-MB concentran casi toda la señal en todos los modelos.</p>
             </article>
@@ -461,7 +461,7 @@
         <section class="page-section" id="regression" aria-labelledby="regressionTitle">
           <div class="page-heading">
             <div><div class="eyebrow"><span class="eyebrow-dot"></span> APRENDIZAJE SUPERVISADO · REGRESIÓN</div><h1 id="regressionTitle">Regresión del riesgo de infarto</h1><p class="page-description">Estima un riesgo continuo entre 0 (sano) y 1 (infarto). A diferencia de la clasificación, el valor continuo permite priorizar pacientes y calibrar la acción del MDP.</p></div>
-            <span class="persona-tag">PERSONA B</span>
+            <span class="model-status"><span class="status-dot"></span> 4 regresores</span>
           </div>
           <div class="notice notice-info" id="regressionNotice"><span class="notice-symbol">i</span><span><strong>Conectando con el módulo de regresión.</strong> Los modelos se entrenan y evalúan en el backend.</span></div>
           <div class="metric-grid model-metric-grid">
@@ -495,7 +495,7 @@
         <section class="page-section" id="mdp" aria-labelledby="mdpTitle">
           <div class="page-heading">
             <div><div class="eyebrow"><span class="eyebrow-dot"></span> APRENDIZAJE POR REFUERZO · MODELO</div><h1 id="mdpTitle">MDP e iteración de valor</h1><p class="page-description">Cuatro estados de riesgo (K-Means sobre troponina y CK-MB en log10), tres acciones, recompensa basada en el costo clínico del error y transiciones simuladas con AdaBoost + K-Means. Se resuelve con la ecuación de Bellman (γ = 0,9).</p></div>
-            <span class="persona-tag">PERSONA B</span>
+            <span class="model-status"><span class="status-dot"></span> Iteración de valor</span>
           </div>
           <div class="notice notice-info" id="mdpNotice"><span class="notice-symbol">i</span><span><strong>Conectando con el módulo MDP.</strong> Se leen los resultados de la iteración de valor.</span></div>
           <div class="metric-grid model-metric-grid">
@@ -543,7 +543,7 @@
         <section class="page-section" id="rl" aria-labelledby="rlTitle">
           <div class="page-heading">
             <div><div class="eyebrow"><span class="eyebrow-dot"></span> APRENDIZAJE POR REFUERZO · AGENTES</div><h1 id="rlTitle">Del Q-Learning tabular a la Deep Q-Network</h1><p class="page-description">Mismo entorno, recompensa e hiperparámetros (γ = 0,9; 10.000 pasos); solo cambia el "cerebro" del agente: de una tabla Q sobre estados discretos a una red neuronal con Experience Replay y red objetivo sobre estado continuo.</p></div>
-            <span class="persona-tag">PERSONA B · C</span>
+            <span class="model-status"><span class="status-dot"></span> Q-Table vs DQN</span>
           </div>
           <div class="notice notice-info" id="rlNotice"><span class="notice-symbol">i</span><span><strong>Conectando con los resultados de refuerzo.</strong> Se leen los experimentos de <code>taller3_dqn</code>.</span></div>
           <div class="metric-grid model-metric-grid">
@@ -583,7 +583,7 @@
         <section class="page-section" id="conclusions" aria-labelledby="conclusionsTitle">
           <div class="page-heading">
             <div><div class="eyebrow"><span class="eyebrow-dot"></span> CIERRE DEL PROYECTO</div><h1 id="conclusionsTitle">Conclusiones</h1><p class="page-description">Qué aportó cada paradigma y qué aprendió el sistema en conjunto.</p></div>
-            <span class="persona-tag">PERSONA C</span>
+            <span class="model-status"><span class="status-dot"></span> 3 paradigmas</span>
           </div>
           <div class="section-grid-3">
             <article class="surface-card conclusion-card"><span class="chart-badge" style="justify-self:start">NO SUPERVISADO</span><div class="conclusion-kpi">4 + 5 perfiles</div><h3>Los datos se agrupan solos</h3><p>Sin usar la etiqueta, K-Means separó perfiles con 34 % a 100 % de infarto. Esa estructura definió los estados del MDP y DBSCAN aisló un 3,7 % de pacientes atípicos.</p></article>

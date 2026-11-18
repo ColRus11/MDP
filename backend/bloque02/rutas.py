@@ -1,6 +1,6 @@
 """Rutas del Bloque 2 y del aprendizaje por refuerzo (ensamblado de CardioLab).
 
-- /api/b2/regresion/resumen : regresión del índice de riesgo de infarto (Persona B).
+- /api/b2/regresion/resumen : regresión del índice de riesgo de infarto.
 - /api/b2/mdp/resumen       : MDP + Iteración de Valor (estados, R, P, política, batalla).
 - /api/b2/rl/resumen        : Q-Learning tabular vs DQN (resultados de taller3_dqn).
 

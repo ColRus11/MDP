@@ -1,4 +1,4 @@
-# PERSONA 3 - Pasos 4 y 5: Iteracion de Valor y Extraccion de Politica
+# Pasos 4 y 5: Iteracion de Valor y Extraccion de Politica
 # Taller 1 Corte 3 - RL  |  MDP: Deteccion temprana de pacientes con posible infarto
 #
 # Requiere haber corrido antes:
@@ -16,7 +16,7 @@ GAMMA = 0.9       # factor de descuento (valora el futuro)
 THETA = 1e-9      # umbral de convergencia
 MAX_IT = 1000
 
-# ---- Cargar el MDP (salidas de Persona 2) ----
+# ---- Cargar el MDP (salidas de recompensa.py y transiciones.py) ----
 R_df = pd.read_csv("recompensa.csv", index_col=0)
 ESTADOS = list(R_df.index)
 ACCIONES = list(R_df.columns)

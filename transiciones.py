@@ -1,4 +1,4 @@
-# PERSONA 2 - Paso 3b: Transiciones P(s' | s, a)   (Opcion B: consultar los modelos)
+# Paso 3b: Transiciones P(s' | s, a)   (Opcion B: consultar los modelos)
 # Taller 1 Corte 3 - RL  |  MDP: Deteccion temprana de pacientes con posible infarto
 #
 # Requiere estados.py (dataset_con_estados.csv y modelo_estados.joblib).
@@ -33,7 +33,7 @@ nS, nA = len(ESTADOS), len(ACCIONES)
 MULT_INFARTO = {"ESCALAR": 0.40, "REPETIR": 1.15, "SEGUIMIENTO": 1.60}
 MULT_SANO    = {"ESCALAR": 1.00, "REPETIR": 1.00, "SEGUIMIENTO": 1.00}
 
-# ---- Cargar datos y modelos de Persona 1 ----
+# ---- Cargar datos y el modelo de estados (estados.py) ----
 df = pd.read_csv("dataset_con_estados.csv")
 modelo = joblib.load("modelo_estados.joblib")
 scaler, kmeans, mapa = modelo["scaler"], modelo["kmeans"], modelo["mapa"]
@@ -49,7 +49,7 @@ print("AdaBoost entrenado | p promedio de infarto:", round(p_infarto.mean(), 3))
 COLS_LOG = ["log_" + v for v in VARS]               # ["log_Troponin", "log_CK-MB"]
 
 def estado_de(trop, ckmb):
-    """Asigna estado (0..3) a marcadores simulados usando el pipeline de Persona 1."""
+    """Asigna estado (0..3) a marcadores simulados usando el pipeline de estados.py."""
     X = pd.DataFrame({COLS_LOG[0]: np.log10(trop), COLS_LOG[1]: np.log10(ckmb)})
     crudo = kmeans.predict(scaler.transform(X))
     return np.array([mapa[c] for c in crudo])      # re-ordena al indice Bajo..Alto-CK

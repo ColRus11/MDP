@@ -1,4 +1,4 @@
-"""Persona B - Bloque 2: Regresión del índice de riesgo de infarto.
+"""Bloque 2: Regresión del índice de riesgo de infarto.
 
 Estima un puntaje CONTINUO de riesgo de infarto (0 a 1) a partir de las variables
 clínicas. A diferencia de la clasificación (sí/no) del Bloque 1, la regresión da un
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     except Exception:
         pass
     salida = exportar_resultados()
-    print("=== REGRESIÓN DE RIESGO DE INFARTO (Bloque 2 · Persona B) ===")
+    print("=== REGRESIÓN DE RIESGO DE INFARTO (Bloque 2) ===")
     print(f"Variables: {len(VARIABLES)} | Conjunto de prueba: {salida['n_test']} pacientes\n")
     print(f"{'modelo':>18} {'R²':>8} {'MAE':>8} {'RMSE':>8}")
     for r in salida["resultados"]:

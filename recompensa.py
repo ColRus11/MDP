@@ -1,4 +1,4 @@
-# PERSONA 2 - Paso 3a: Recompensa R(s, a)
+# Paso 3a: Recompensa R(s, a)
 # Taller 1 Corte 3 - RL  |  MDP: Deteccion temprana de pacientes con posible infarto
 #
 # Requiere haber corrido antes estados.py (usa dataset_con_estados.csv).

@@ -18,7 +18,7 @@ Se conserva el problema del Taller 2 (mismo entorno, misma matriz de recompensa,
 | `app.py` | **Aplicación** (Streamlit): Urgencias en vivo, Evaluar paciente, Entrenamiento en vivo y Resultados |
 | `triaje_rl/core.py` | Núcleo: datos, entorno, agente Q-Table (Taller 2) y agente DQN (Taller 3) |
 | `entrenar.py` | Entrena los agentes, corre los experimentos y guarda `modelos/` y `resultados/resultados_app.json` |
-| `Taller3_DQN_PersonaB.ipynb` | El laboratorio paso a paso (funciona en Google Colab: descarga el dataset solo) |
+| `Taller3_DQN.ipynb` | El laboratorio paso a paso (funciona en Google Colab: descarga el dataset solo) |
 | `modelos/` | Agentes ya entrenados (la app los carga) |
 | `resultados/` | Gráficas y tablas del experimento |
 
