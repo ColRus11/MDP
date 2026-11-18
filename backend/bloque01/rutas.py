@@ -7,9 +7,14 @@ from .clasificacion import (
     entrenar_random_forest,
     obtener_configuracion_modelo,
 )
-from .clustering import asignar_cluster
+from .clustering import (
+    asignar_cluster,
+    evaluar_jerarquico,
+    perfilar_jerarquico,
+    perfilar_kmeans,
+)
 from .dbscan import analizar_pacientes_atipicos
-from .datos import estadisticas_datos, resumen_datos
+from .datos import estadisticas_datos, preparar_clustering, resumen_datos
 from .esquemas import (
     AsignacionClusterResponse,
     DatosPaciente,
@@ -90,3 +95,41 @@ def analisis_dbscan(
     min_samples: int = Query(default=14, ge=2, le=5000),
 ):
     return analizar_pacientes_atipicos(eps=eps, min_samples=min_samples)
+
+
+@router.get("/clustering/jerarquico")
+def clustering_jerarquico(
+    k_min: int = Query(default=2, ge=2, le=10),
+    k_max: int = Query(default=10, ge=2, le=12),
+):
+    """Métricas de clustering jerárquico (silueta, cofenética, tamaño mínimo)."""
+    _, X, _ = preparar_clustering()
+    return {"resultados": evaluar_jerarquico(X, k_min=k_min, k_max=k_max)}
+
+
+@router.get("/clustering/perfiles")
+def clustering_perfiles(
+    metodo: str = Query(default="kmeans"),
+    k: int = Query(default=5, ge=2, le=10),
+):
+    """Perfil clínico por grupo (K-Means o jerárquico) para la tabla del frontend."""
+    if metodo == "kmeans":
+        perfil = perfilar_kmeans(k=k)
+    else:
+        perfil = perfilar_jerarquico(k=k, metodo=metodo)
+    perfiles = [
+        {
+            "cluster": int(cluster_id),
+            "pacientes": int(fila["pacientes"]),
+            "edad": float(fila["edad"]),
+            "pulso": float(fila["pulso"]),
+            "sistolica": float(fila["sistolica"]),
+            "diastolica": float(fila["diastolica"]),
+            "glucosa": float(fila["glucosa"]),
+            "ckmb_mediana": float(fila["ckmb_mediana"]),
+            "troponina_mediana": float(fila["troponina_mediana"]),
+            "pct_infarto": float(fila["pct_infarto"]),
+        }
+        for cluster_id, fila in perfil.iterrows()
+    ]
+    return {"perfiles": perfiles}
