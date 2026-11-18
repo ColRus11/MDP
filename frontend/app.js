@@ -11,15 +11,23 @@
     prediction: "/api/b1/clasificacion/predecir",
     clusterAssignment: "/api/b1/clustering/asignar",
     dbscan: "/api/b1/dbscan/analisis",
+    regression: "/api/b2/regresion/resumen",
+    mdp: "/api/b2/mdp/resumen",
+    rl: "/api/b2/rl/resumen",
   };
   const CLUSTER_DISCLAIMER = "Agrupación no supervisada con fines exploratorios. El porcentaje corresponde a los pacientes del dataset de entrenamiento en ese grupo, no a la probabilidad de este paciente. No es un diagnóstico.";
   const numberFormat = new Intl.NumberFormat("es-CO");
   let activeTreeView = null;
   const tabTitles = {
+    intro: "Introducción",
     overview: "Resumen",
     clustering: "Clustering",
     classification: "Clasificación",
     prediction: "Consulta de clasificación",
+    regression: "Regresión",
+    mdp: "MDP · Iteración de valor",
+    rl: "Q-Learning y DQN",
+    conclusions: "Conclusiones",
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -866,6 +874,153 @@
     })[character]);
   }
 
+  /* ===================== Ensamblado: Regresión, MDP y RL ===================== */
+  const loadedSections = new Set();
+  const actionPill = (action) => `<span class="action-pill action-${escapeHtml(action)}">${escapeHtml(action)}</span>`;
+
+  function emptyRow(colspan, message) {
+    return `<tr><td colspan="${colspan}"><div class="empty-state"><span>◷</span><b>${escapeHtml(message)}</b></div></td></tr>`;
+  }
+
+  function renderBars(container, rows, { valueDigits = 3, signed = false } = {}) {
+    const max = Math.max(...rows.map((row) => Math.abs(Number(row.value))), 1e-9);
+    container.innerHTML = rows.map((row) => {
+      const value = Number(row.value);
+      const width = Math.max(2, (Math.abs(value) / max) * 100);
+      const negative = signed && value < 0;
+      return `<div class="bar-row">
+        <span class="bar-label" title="${escapeHtml(row.label)}">${escapeHtml(row.label)}</span>
+        <span class="bar-track"><span class="bar-fill${negative ? " negative" : ""}" style="width:${width.toFixed(1)}%"></span></span>
+        <span class="bar-value">${formatNumber(value, valueDigits)}</span>
+      </div>`;
+    }).join("");
+  }
+
+  async function loadSection(key, noticeSelector, loader) {
+    if (loadedSections.has(key)) return;
+    try {
+      await loader();
+      loadedSections.add(key);
+      $(noticeSelector).hidden = true;
+    } catch (error) {
+      const notice = $(noticeSelector);
+      notice.hidden = false;
+      notice.innerHTML = `<span class="notice-symbol">!</span><span><strong>No fue posible cargar esta sección.</strong> ${escapeHtml(error.message)}</span>`;
+    }
+  }
+
+  async function loadRegression() {
+    const data = await request(API.regression);
+    const best = data.resultados[0];
+    $("#regBestModel").textContent = data.mejor_modelo;
+    $("#regR2").textContent = formatNumber(best.r2, 3);
+    $("#regMae").textContent = formatNumber(best.mae, 3);
+    $("#regRmse").textContent = formatNumber(best.rmse, 3);
+    $("#regTest").textContent = numberFormat.format(data.n_test);
+    $("#regressionTable").innerHTML = data.resultados.map((row) => `<tr class="${row.modelo === data.mejor_modelo ? "best-row" : ""}">
+      <td class="variable-cell">${escapeHtml(row.modelo)}</td>
+      <td class="numeric-cell">${formatNumber(row.r2, 4)}</td>
+      <td class="numeric-cell">${formatNumber(row.mae, 4)}</td>
+      <td class="numeric-cell">${formatNumber(row.rmse, 4)}</td>
+    </tr>`).join("");
+    renderBars($("#regressionImportance"), data.importancias.map((item) => ({ label: item.variable, value: item.importancia })));
+    const readings = {
+      ESCALAR: "Riesgo alto: avisar al médico ya.",
+      REPETIR: "Riesgo intermedio: repetir medición.",
+      SEGUIMIENTO: "Riesgo bajo: control habitual.",
+    };
+    $("#regressionBridge").innerHTML = data.puente_mdp.map((row) => `<tr>
+      <td class="numeric-cell">${formatNumber(row.riesgo, 2)}</td>
+      <td>${actionPill(row.accion)}</td>
+      <td>${escapeHtml(readings[row.accion] ?? "")}</td>
+    </tr>`).join("");
+  }
+
+  async function loadMdp() {
+    const data = await request(API.mdp);
+    const actions = data.acciones;
+    $("#mdpStatesCount").textContent = data.estados.length;
+    $("#mdpActionsCount").textContent = actions.length;
+    $("#mdpGamma").textContent = formatNumber(data.gamma, 2);
+    const chosen = [...new Set(data.politica.map((row) => row.accion_optima))];
+    $("#mdpPolicySummary").textContent = chosen.length === 1 ? chosen[0] : chosen.join(" / ");
+    const agent = data.batalla.find((row) => /ptima/i.test(row.politica)) ?? data.batalla[0];
+    $("#mdpBestValue").textContent = formatNumber(agent.v_promedio, 1);
+
+    $("#mdpStates").innerHTML = data.estados.map((row) => `<tr>
+      <td class="variable-cell">S${row.estado} · ${escapeHtml(row.nombre)}</td>
+      <td class="numeric-cell">${numberFormat.format(row.pacientes)}</td>
+      <td class="numeric-cell">${formatNumber(row.troponina_mediana, 3)}</td>
+      <td class="numeric-cell">${formatNumber(row.ckmb_mediana, 2)}</td>
+      <td class="numeric-cell">${formatNumber(row.pct_infarto, 1)} %</td>
+    </tr>`).join("");
+
+    $("#mdpReward").innerHTML = data.recompensa.map((row) => `<tr>
+      <td class="variable-cell">${escapeHtml(row.estado)}</td>
+      ${actions.map((action) => `<td class="numeric-cell">${formatNumber(row[action], 0)}</td>`).join("")}
+    </tr>`).join("");
+
+    $("#mdpPolicy").innerHTML = data.politica.map((row) => `<tr>
+      <td class="variable-cell">${escapeHtml(row.estado)}</td>
+      <td class="numeric-cell"><strong>${formatNumber(row.v_optimo, 2)}</strong></td>
+      ${actions.map((action) => `<td class="numeric-cell">${formatNumber(row[`q_${action}`], 2)}</td>`).join("")}
+      <td>${actionPill(row.accion_optima)}</td>
+    </tr>`).join("");
+
+    renderBars($("#mdpBattle"), data.batalla.map((row) => ({ label: row.politica, value: row.v_promedio })), { valueDigits: 1, signed: true });
+
+    $("#mdpTransitions").innerHTML = actions.map((action) => {
+      const block = data.transiciones[action];
+      return `<div>
+        <div class="matrix-title">${actionPill(action)}</div>
+        <div class="table-wrap"><table class="matrix-mini">
+          <thead><tr><th>s \\ s′</th>${block.estados.map((name) => `<th>${escapeHtml(name)}</th>`).join("")}</tr></thead>
+          <tbody>${block.matriz.map((row, index) => `<tr><td class="variable-cell">${escapeHtml(block.estados[index])}</td>${row.map((value) => `<td class="${value >= 0.5 ? "cell-strong" : ""}">${formatNumber(value, 2)}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table></div>
+      </div>`;
+    }).join("");
+  }
+
+  async function loadRl() {
+    const data = await request(API.rl);
+    $("#rlTrain").textContent = numberFormat.format(data.n_entrenamiento);
+    $("#rlTest").textContent = numberFormat.format(data.n_prueba);
+    const best = data.comparacion.reduce((a, b) => (b.recompensa > a.recompensa ? b : a));
+    const table = data.comparacion.find((row) => /Q-Table/i.test(row.politica) && /cuantil/i.test(row.politica))
+      ?? data.comparacion.find((row) => /Q-Table/i.test(row.politica));
+    $("#rlBestReward").textContent = formatNumber(best.recompensa, 2);
+    $("#rlFn").textContent = numberFormat.format(best.falsos_negativos);
+    $("#rlFa").textContent = numberFormat.format(best.falsas_alarmas);
+    if (table) {
+      $("#rlBestDelta").textContent = `vs ${formatNumber(table.recompensa, 2)} de la Q-Table`;
+      $("#rlFaDelta").textContent = `vs ${numberFormat.format(table.falsas_alarmas)} de la Q-Table`;
+    }
+
+    $("#rlComparison").innerHTML = data.comparacion.map((row) => `<tr class="${row.politica === best.politica ? "best-row" : ""}">
+      <td class="variable-cell">${escapeHtml(row.politica)}</td>
+      <td class="numeric-cell">${formatNumber(row.recompensa, 2)}</td>
+      <td class="numeric-cell">${numberFormat.format(row.falsos_negativos)}</td>
+      <td class="numeric-cell">${numberFormat.format(row.falsas_alarmas)}</td>
+      <td class="numeric-cell">${escapeHtml(row.sanos_en_verde)}</td>
+      <td class="numeric-cell">${escapeHtml(row.pct_rojo)}</td>
+      <td class="numeric-cell">${escapeHtml(row.pct_amarillo)}</td>
+      <td class="numeric-cell">${escapeHtml(row.pct_verde)}</td>
+    </tr>`).join("");
+
+    const colors = ["Verde", "Amarillo", "Rojo"];
+    $("#rlRewardMatrix").innerHTML = Object.entries(data.recompensa_triaje).map(([result, values]) => `<tr>
+      <td class="variable-cell">${escapeHtml(result)}</td>
+      ${colors.map((color) => `<td class="numeric-cell">${formatNumber(values[color], 1)}</td>`).join("")}
+    </tr>`).join("");
+
+    const experimentRows = (rows) => rows.map((row) => {
+      const cells = Object.values(row);
+      return `<tr><td class="variable-cell">${escapeHtml(cells[0])}</td><td class="numeric-cell">${escapeHtml(cells[1])}</td><td class="numeric-cell">${escapeHtml(cells[2])}</td></tr>`;
+    }).join("");
+    $("#rlStability").innerHTML = data.estabilidad.length ? experimentRows(data.estabilidad) : emptyRow(3, "Sin datos");
+    $("#rlVariables").innerHTML = data.variables.length ? experimentRows(data.variables) : emptyRow(3, "Sin datos");
+  }
+
   function switchTab(tabId) {
     if (!tabTitles[tabId]) return;
     document.querySelectorAll(".page-section").forEach((section) => section.classList.toggle("active", section.id === tabId));
@@ -879,6 +1034,10 @@
       loadDbscanAnalysis();
     }
     if (tabId === "classification") loadClassification();
+    if (tabId === "regression") loadSection("regression", "#regressionNotice", loadRegression);
+    if (tabId === "mdp") loadSection("mdp", "#mdpNotice", loadMdp);
+    if (tabId === "rl") loadSection("rl", "#rlNotice", loadRl);
+    window.scrollTo({ top: 0 });
   }
 
   function initTheme() {

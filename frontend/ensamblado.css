@@ -1,0 +1,84 @@
+/* Ensamblado CardioLab — Regresión, MDP, Q-Learning/DQN, Introducción y Conclusiones.
+   Reutiliza las variables y componentes de styles.css. */
+
+/* Corrección: .notice { display:flex } anulaba el atributo hidden, por lo que los
+   avisos "Conectando con el módulo..." nunca se ocultaban tras cargar los datos. */
+.notice[hidden] { display: none; }
+
+/* Segundo grupo del menú lateral y valores largos en tarjetas de métricas */
+.main-nav + .nav-label { margin-top: 18px; }
+#regBestModel, #mdpPolicySummary { font-size: 19px; line-height: 1.25; }
+
+.section-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.section-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.section-stack { display: grid; gap: 14px; margin-top: 14px; }
+.persona-tag { display: inline-flex; align-items: center; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-strong); font-size: 8px; font-weight: 700; letter-spacing: .5px; white-space: nowrap; }
+
+/* Figuras generadas por los scripts del proyecto */
+.figure-frame { display: grid; margin-top: 12px; padding: 8px; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.figure-frame img { display: block; width: 100%; height: auto; border-radius: 4px; }
+.figure-caption { margin: 8px 0 0; color: var(--muted); font-size: 8px; line-height: 1.5; }
+
+/* Barras horizontales simples */
+.bar-list { display: grid; gap: 9px; margin-top: 12px; }
+.bar-row { display: grid; grid-template-columns: 150px 1fr 64px; align-items: center; gap: 10px; font-size: 9px; }
+.bar-row .bar-label { overflow: hidden; color: var(--muted-strong); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row .bar-track { height: 9px; overflow: hidden; border-radius: 999px; background: #eef3f6; }
+.bar-row .bar-fill { height: 100%; border-radius: 999px; background: var(--teal); }
+.bar-row .bar-fill.negative { background: #e0697a; }
+.bar-row .bar-value { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+.dark-theme .bar-row .bar-track { background: #202f38; }
+
+/* Semáforo de acciones */
+.action-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-size: 8px; font-weight: 700; letter-spacing: .4px; }
+.action-pill::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+.action-ESCALAR { background: #fdecef; color: #d0435a; }
+.action-REPETIR { background: #fdf4e3; color: #b9852a; }
+.action-SEGUIMIENTO { background: #e8f7f2; color: #1c9a7d; }
+.best-row td { background: var(--teal-soft); color: var(--text); font-weight: 700; }
+.dark-theme .best-row td { background: #1d3a35; }
+
+/* Matrices de transición */
+.matrix-mini { width: 100%; font-size: 8px; }
+.matrix-mini th, .matrix-mini td { padding: 6px 7px; text-align: center; }
+.matrix-mini td.cell-strong { color: var(--text); font-weight: 800; }
+.matrix-title { display: flex; align-items: center; gap: 6px; margin: 4px 0 6px; font: 700 10px "Manrope", sans-serif; }
+
+/* Introducción: pipeline */
+.pipeline-track { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.pipeline-step { position: relative; display: grid; align-content: start; gap: 6px; padding: 13px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); cursor: pointer; text-align: left; transition: border-color .2s, transform .2s; }
+.pipeline-step:hover { border-color: var(--teal); transform: translateY(-2px); }
+.pipeline-step .step-number { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 6px; background: var(--teal-soft); color: var(--teal-dark); font: 800 10px "Manrope", sans-serif; }
+.pipeline-step b { color: var(--text); font: 700 11px "Manrope", sans-serif; }
+.pipeline-step span { color: var(--muted); font-size: 8.5px; line-height: 1.45; }
+.pipeline-step em { color: var(--teal-dark); font-size: 7.5px; font-style: normal; font-weight: 700; letter-spacing: .5px; }
+.semaforo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.semaforo-item { display: grid; gap: 4px; padding: 11px; border-radius: 8px; font-size: 9px; line-height: 1.45; }
+.semaforo-item b { font: 800 11px "Manrope", sans-serif; }
+.semaforo-item.rojo { background: #fdecef; color: #9b3243; }
+.semaforo-item.amarillo { background: #fdf4e3; color: #8a6420; }
+.semaforo-item.verde { background: #e8f7f2; color: #17735e; }
+.team-list { display: grid; gap: 8px; margin-top: 12px; }
+.team-member { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 10px; font-size: 9px; }
+.team-member .avatar { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--teal-soft); color: var(--teal-dark); font: 800 10px "Manrope", sans-serif; }
+.team-member b { display: block; color: var(--text); font-size: 10px; }
+.team-member span { color: var(--muted); }
+
+/* Conclusiones */
+.conclusion-card { display: grid; align-content: start; gap: 8px; }
+.conclusion-card h3 { margin: 0; font: 700 12px "Manrope", sans-serif; }
+.conclusion-card p { margin: 0; color: var(--muted-strong); font-size: 9.5px; line-height: 1.6; }
+.conclusion-kpi { color: var(--teal-dark); font: 800 18px "Manrope", sans-serif; letter-spacing: -.4px; }
+.plain-list { display: grid; gap: 7px; margin: 10px 0 0; padding-left: 16px; color: var(--muted-strong); font-size: 9.5px; line-height: 1.55; }
+.callout { margin-top: 14px; padding: 12px 14px; border: 1px solid #cfe9e1; border-radius: 9px; background: var(--teal-soft); color: #245a4e; font-size: 9.5px; line-height: 1.6; }
+.dark-theme .callout { border-color: #2a4a42; background: #1d3a35; color: #cfe9e1; }
+.dark-theme .figure-frame { background: #f7f9fb; }
+
+@media (max-width: 1100px) {
+  .pipeline-track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .section-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .pipeline-track, .section-grid-2, .section-grid-3, .semaforo-grid { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 110px 1fr 54px; }
+}

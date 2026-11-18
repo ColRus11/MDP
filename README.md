@@ -135,6 +135,29 @@ La documentación interactiva de FastAPI queda disponible en
 | `POST` | `/api/b1/clasificacion/predecir` | Predicción, estimaciones por clase y recorrido en un árbol del Random Forest |
 | `POST` | `/api/b1/clustering/asignar` | Asignación K-Means y perfil del grupo de entrenamiento |
 | `GET` | `/api/b1/dbscan/analisis` | Perfil comparativo de ruido y resto (`eps` y `min_samples` configurables) |
+| `GET` | `/api/b1/clustering/jerarquico` | Silueta, correlación cofenética y tamaño mínimo por enlace y `k` |
+| `GET` | `/api/b1/clustering/perfiles` | Perfil clínico por grupo (`metodo=kmeans` o enlace jerárquico, `k`) |
+| `GET` | `/api/b2/regresion/resumen` | Regresión del riesgo de infarto: R², MAE, RMSE, importancias y puente al MDP |
+| `GET` | `/api/b2/mdp/resumen` | Estados, recompensa, transiciones, política óptima y batalla de políticas |
+| `GET` | `/api/b2/rl/resumen` | Q-Learning tabular frente a DQN: comparación y experimentos de `taller3_dqn` |
+
+### Pestañas de la aplicación
+
+La interfaz reúne todo el proyecto en un solo programa:
+
+| Pestaña | Contenido | Responsable |
+|---|---|---|
+| Introducción | Problema, recorrido del pipeline y equipo | Persona C |
+| Resumen y datos | Calidad y estadísticas del conjunto | Persona A |
+| Clustering | K-Means, jerárquico y DBSCAN | Persona A |
+| Clasificación · Demo predictiva | Random Forest y consulta de un paciente | Persona A |
+| Regresión | Riesgo continuo de infarto y su conexión con el MDP | Persona B |
+| MDP · Iteración de valor | Estados, R, P, política óptima y batalla | Persona B |
+| Q-Learning y DQN | Comparación de agentes y experimentos de estabilidad | Persona B · C |
+| Conclusiones | Hallazgos, limitaciones y trabajo futuro | Persona C |
+
+Las pestañas MDP y Q-Learning/DQN leen los artefactos ya generados en la raíz y en
+`taller3_dqn/resultados/`; si faltan, vuelva a ejecutar los scripts correspondientes.
 
 El Random Forest se entrena una sola vez por proceso y se reutiliza para la
 predicción y el reporte de evaluación. La visualización representa un árbol del
@@ -169,6 +192,13 @@ $env:PYTHONPATH = "backend"
 python -m bloque01.ejecutar
 ```
 
+La regresión del Bloque 2 se reproduce así (genera `backend/bloque02/resultados/`):
+
+```bash
+cd backend
+python -m bloque02.regresion
+```
+
 Los scripts del modelo MDP también pueden ejecutarse desde la raíz, siguiendo
 este orden:
 
@@ -196,12 +226,13 @@ python3 -m unittest discover -s tests -v
 .
 ├── backend/
 │   ├── bloque01/       # Datos, clustering, clasificación, esquemas y rutas
+│   ├── bloque02/       # Regresión de riesgo y rutas de MDP y refuerzo
 │   ├── chequeo.py      # Tabla cruzada de una partición jerárquica
 │   ├── data/           # Conjunto de datos utilizado por CardioLab
 │   ├── figuras/        # Dendrograma y gráfica de k-distancias
 │   ├── tests/          # Pruebas de clustering y análisis de modelos
 │   └── main.py         # Aplicación FastAPI
-├── frontend/           # Interfaz web estática
+├── frontend/           # Interfaz web estática (app.js, styles.css, ensamblado.css)
 ├── taller3_dqn/        # Extensión de aprendizaje por refuerzo profundo
 ├── estados.py          # Preparación de estados para el MDP
 ├── recompensa.py       # Matriz de recompensa

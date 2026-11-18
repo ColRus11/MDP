@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from bloque01.rutas import router as router_b1
+from bloque02.rutas import router as router_b2
 
 app = FastAPI(title="ML Infarto")
 
@@ -18,3 +19,4 @@ def salud():
 
 
 app.include_router(router_b1)
+app.include_router(router_b2)
