@@ -113,7 +113,7 @@ streamlit run app.py
 
 La aplicación se abrirá en `http://localhost:8501`. Para volver a ejecutar los
 experimentos y generar sus artefactos, ejecute `python entrenar.py`. El cuaderno
-`Taller3_DQN_PersonaB.ipynb` presenta el desarrollo paso a paso.
+`Taller3_DQN.ipynb` presenta el desarrollo paso a paso.
 
 ## Ejecución de CardioLab
 
@@ -145,16 +145,16 @@ La documentación interactiva de FastAPI queda disponible en
 
 La interfaz reúne todo el proyecto en un solo programa:
 
-| Pestaña | Contenido | Responsable |
-|---|---|---|
-| Introducción | Problema, recorrido del pipeline y equipo | Persona C |
-| Resumen y datos | Calidad y estadísticas del conjunto | Persona A |
-| Clustering | K-Means, jerárquico y DBSCAN | Persona A |
-| Clasificación · Demo predictiva | Random Forest y consulta de un paciente | Persona A |
-| Regresión | Riesgo continuo de infarto y su conexión con el MDP | Persona B |
-| MDP · Iteración de valor | Estados, R, P, política óptima y batalla | Persona B |
-| Q-Learning y DQN | Comparación de agentes y experimentos de estabilidad | Persona B · C |
-| Conclusiones | Hallazgos, limitaciones y trabajo futuro | Persona C |
+| Pestaña | Contenido |
+|---|---|
+| Introducción | Problema, recorrido del pipeline y equipo |
+| Resumen y datos | Calidad y estadísticas del conjunto |
+| Clustering | K-Means, jerárquico y DBSCAN |
+| Clasificación · Demo predictiva | Random Forest y consulta de un paciente |
+| Regresión | Riesgo continuo de infarto y su conexión con el MDP |
+| MDP · Iteración de valor | Estados, R, P, política óptima y batalla |
+| Q-Learning y DQN | Comparación de agentes y experimentos de estabilidad |
+| Conclusiones | Hallazgos, limitaciones y trabajo futuro |
 
 Las pestañas MDP y Q-Learning/DQN leen los artefactos ya generados en la raíz y en
 `taller3_dqn/resultados/`; si faltan, vuelva a ejecutar los scripts correspondientes.

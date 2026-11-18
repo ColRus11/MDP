@@ -1,5 +1,5 @@
-# PERSONA 1 - Gráfica de los grupos (estados)
-# Requiere haber corrido antes persona1_estados_medical.py (usa dataset_con_estados.csv)
+# Gráfica de los grupos (estados)
+# Requiere haber corrido antes estados.py (usa dataset_con_estados.csv)
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

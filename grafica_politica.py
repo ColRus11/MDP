@@ -1,4 +1,4 @@
-# PERSONA 3 - Parte 3: "Batalla de las Politicas" (evaluar y justificar)
+# Parte 3: "Batalla de las Politicas" (evaluar y justificar)
 # Taller 1 Corte 3 - RL  |  MDP: Deteccion temprana de pacientes con posible infarto
 #
 # Requiere haber corrido antes:
