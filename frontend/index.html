@@ -16,8 +16,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
-    <link rel="stylesheet" href="./ensamblado.css" />
-    <script src="./app.js" defer></script>
+    <link rel="stylesheet" href="./ensamblado.css?v=2026111801" />
+    <script src="./app.js?v=2026111801" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -398,6 +398,17 @@
           <div class="prediction-layout">
             <article class="surface-card prediction-form-card">
               <div class="form-intro"><span class="form-icon">♡</span><div><h2>Datos del paciente</h2><p>Completa las variables utilizadas por el modelo de clasificación.</p></div></div>
+              <div class="example-patients" aria-labelledby="examplePatientsTitle">
+                <div class="example-heading"><b id="examplePatientsTitle">Pacientes de ejemplo</b><span>Pacientes reales del conjunto de datos. Un clic los carga y consulta el modelo.</span></div>
+                <div class="example-grid">
+                  <button class="example-button" type="button" data-example="sano"><b>Sano</b><span>Marcadores normales</span><i class="example-real negative">Real: sin infarto</i></button>
+                  <button class="example-button" type="button" data-example="troponina"><b>Troponina alta</b><span>El marcador más fuerte</span><i class="example-real positive">Real: infarto</i></button>
+                  <button class="example-button" type="button" data-example="ckmb"><b>CK-MB alta</b><span>Paciente joven, 30 años</span><i class="example-real positive">Real: infarto</i></button>
+                  <button class="example-button" type="button" data-example="limite"><b>Caso límite</b><span>Marcadores moderados</span><i class="example-real positive">Real: infarto</i></button>
+                  <button class="example-button" type="button" data-example="glucosa"><b>Glucosa alta</b><span>Sin daño cardíaco</span><i class="example-real negative">Real: sin infarto</i></button>
+                </div>
+                <p class="example-note" id="exampleNote" hidden></p>
+              </div>
               <form id="predictionForm">
                 <div class="form-section-label"><span>01</span> SIGNOS VITALES Y DEMOGRAFÍA</div>
                 <div class="form-grid">

@@ -821,6 +821,52 @@
     container.replaceChildren(content);
   }
 
+  /* Pacientes reales del conjunto de datos (índice de la fila tras la limpieza). */
+  const EXAMPLE_PATIENTS = {
+    sano: {
+      fila: 135,
+      nota: "Paciente sano: troponina y CK-MB normales. El modelo lo clasifica negativo y lo ubica en un grupo de marcadores normales.",
+      datos: { Age: 67, "Heart rate": 58, "Systolic blood pressure": 119, "Diastolic blood pressure": 72, "Blood sugar": 109, "CK-MB": 1.5, Troponin: 0.009 },
+    },
+    troponina: {
+      fila: 25,
+      nota: "Troponina de 1,39 ng/mL, muy por encima de lo normal. Es el marcador con más peso en el modelo: infarto con certeza casi total.",
+      datos: { Age: 72, "Heart rate": 64, "Systolic blood pressure": 106, "Diastolic blood pressure": 68, "Blood sugar": 111, "CK-MB": 2.11, Troponin: 1.39 },
+    },
+    ckmb: {
+      fila: 23,
+      nota: "Paciente de 30 años con CK-MB de 50,5 ng/mL y troponina normal. La edad no engaña al modelo: detecta el infarto por la CK-MB.",
+      datos: { Age: 30, "Heart rate": 63, "Systolic blood pressure": 110, "Diastolic blood pressure": 68, "Blood sugar": 107, "CK-MB": 50.46, Troponin: 0.003 },
+    },
+    limite: {
+      fila: 35,
+      nota: "Marcadores moderados. El clustering lo ubica en un grupo de marcadores normales, pero el clasificador sí detecta el infarto: lo supervisado complementa a lo no supervisado.",
+      datos: { Age: 64, "Heart rate": 58, "Systolic blood pressure": 156, "Diastolic blood pressure": 76, "Blood sugar": 82, "CK-MB": 6.78, Troponin: 0.012 },
+    },
+    glucosa: {
+      fila: 4,
+      nota: "Glucosa de 300 mg/dL pero marcadores cardíacos bajos. El clustering lo agrupa por glucosa alta y el modelo, correctamente, no lo marca como infarto.",
+      datos: { Age: 55, "Heart rate": 64, "Systolic blood pressure": 112, "Diastolic blood pressure": 65, "Blood sugar": 300, "CK-MB": 1.08, Troponin: 0.003 },
+    },
+  };
+
+  function loadExamplePatient(key) {
+    const example = EXAMPLE_PATIENTS[key];
+    if (!example) return;
+    const form = $("#predictionForm");
+    Object.entries(example.datos).forEach(([name, value]) => {
+      const input = form.elements.namedItem(name);
+      if (input) input.value = value;
+    });
+    document.querySelectorAll(".example-button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.example === key);
+    });
+    const note = $("#exampleNote");
+    note.textContent = `${example.nota} (Fila ${example.fila} del conjunto de datos.)`;
+    note.hidden = false;
+    form.requestSubmit();
+  }
+
   async function submitPrediction(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -1059,6 +1105,9 @@
     $("#refreshButton").addEventListener("click", loadOverview);
     $("#predictionForm").addEventListener("invalid", clearPredictionPanels, true);
     $("#predictionForm").addEventListener("submit", submitPrediction);
+    document.querySelectorAll("[data-example]").forEach((button) => {
+      button.addEventListener("click", () => loadExamplePatient(button.dataset.example));
+    });
     $("#dbscanForm").addEventListener("submit", (event) => {
       event.preventDefault();
       if (event.currentTarget.reportValidity()) loadDbscanAnalysis();
